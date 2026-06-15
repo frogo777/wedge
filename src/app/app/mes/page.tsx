@@ -90,6 +90,9 @@ function PreviewCta({ children, onClick, disabled }: { children: React.ReactNode
 
 export default function MesFiscalPage() {
   const router = useRouter();
+  // R7.5 (H1): el cargador de XML/ZIP se muestra en TODOS los modos (incl. diagnóstico); este helper
+  // hace scroll a esa tarjeta para que "Completar con XML/ZIP" nunca caiga en /app/cfdis vacío.
+  const goToUpload = () => document.getElementById("completar-xml-zip")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   // El draft del diagnóstico vive en localStorage (cliente) → se lee tras montar para
   // evitar mismatch de hidratación. Sin draft = demo (mock); fresco = diagnóstico; viejo = expirado.
@@ -249,9 +252,7 @@ export default function MesFiscalPage() {
             más preciso, completa tus CFDIs con XML/ZIP o conexión SAT más adelante. Wedge prepara; tú validas en SAT.
           </Alert>
           <div style={{ display: "flex", gap: wt.space[5], flexWrap: "wrap", alignItems: "center", marginTop: wt.space[4] }}>
-            <span aria-disabled style={{ display: "inline-flex", alignItems: "center", gap: wt.space[2], ...wt.text.label, color: wt.color.textMuted, opacity: 0.7 }}>
-              Completar con XML/ZIP <Badge variant="outline" size="sm">Pronto</Badge>
-            </span>
+            <PreviewCta onClick={goToUpload}>Completar con XML/ZIP</PreviewCta>
             <PreviewCta onClick={handleNuevoDiagnostico}>Hacer nuevo diagnóstico</PreviewCta>
             <PreviewCta onClick={handleBorrarDraft}>Borrar diagnóstico local</PreviewCta>
           </div>
@@ -315,8 +316,8 @@ export default function MesFiscalPage() {
 
       {/* CFDI Engine — carga real XML/ZIP (5B) + demo ficticios (5A). En "guardado" también, para
           poder RECALCULAR subiendo de nuevo los XML (el snapshot no guarda los archivos). */}
-      {(mode === "demo" || mode === "cfdi-demo" || mode === "xml-preview" || mode === "guardado") && (
-        <section style={{ marginBottom: wt.space[6] }}>
+      {(mode === "demo" || mode === "cfdi-demo" || mode === "xml-preview" || mode === "guardado" || mode === "diagnostico" || mode === "expirado") && (
+        <section id="completar-xml-zip" style={{ marginBottom: wt.space[6] }}>
           <Card variant="quiet" padding="comfortable">
             <div style={{ display: "flex", alignItems: "flex-start", gap: wt.space[3], marginBottom: wt.space[5] }}>
               <span style={{ display: "inline-flex", color: wt.color.trustBlueGray, marginTop: 2 }}><FileText size={18} /></span>
@@ -377,7 +378,7 @@ export default function MesFiscalPage() {
             urgency={days <= 7 ? "soon" : "calm"}
             title={mes.nextBestAction.title}
             description={`${mes.nextBestAction.description} · ${mes.nextBestAction.impact} · ${mes.nextBestAction.estimatedTime}`}
-            cta={{ label: mes.nextBestAction.actionLabel, onClick: () => router.push("/app/cfdis") }}
+            cta={{ label: mes.nextBestAction.actionLabel, onClick: goToUpload }}
           />
         </section>
       )}
