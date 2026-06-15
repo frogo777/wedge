@@ -125,11 +125,17 @@ function sniffXmlEncoding(bytes: Uint8Array): string {
 }
 
 export function decodeXmlBytes(bytes: Uint8Array): string {
+  let text: string;
   try {
-    return new TextDecoder(sniffXmlEncoding(bytes), { fatal: false }).decode(bytes);
+    text = new TextDecoder(sniffXmlEncoding(bytes), { fatal: false }).decode(bytes);
   } catch {
-    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
   }
+  // R7.4B: el string ya es Unicode. Si el prólogo aún declara otra codificación
+  // (ISO-8859-1 / Windows-1252), el DOMParser del navegador puede RECHAZAR el XML (intenta
+  // re-interpretar bytes que ya no existen) → el CFDI se cae en el navegador aunque parsee en
+  // Node (regex). Normalizamos la declaración a UTF-8 para que sea consistente con el contenido.
+  return text.replace(/(<\?xml[^>]*\bencoding\s*=\s*")[^"]*(")/i, "$1UTF-8$2");
 }
 
 /** Lee un archivo .xml como texto, respetando su encoding declarado. Falla seguro. */

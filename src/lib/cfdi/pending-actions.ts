@@ -39,7 +39,10 @@ export function pendingActionsFromCfdis(
   // "excluido" (decisión del usuario en el Inbox, Fase 5D) ya no pide acción → los pendientes
   // se reducen conforme el usuario decide.
   const pendiente = (c: NormalizedCfdi) => c.status === "detectado" || c.status === "requiereRevision";
-  const ingresos = vivos.filter((c) => isUserIncome(c.type, c.direction) && pendiente(c));
+  // R7.4B: "confirmar ingresos" cuenta solo ingresos COBRABLES en MXN (el motor canónico excluye
+  // no-MXN y PPD). Evita inflar el monto con USD a valor nominal y alinea la cifra con "Ingresos
+  // detectados" del Fiscal Inbox. Los PPD se cuentan aparte (pendiente de complemento).
+  const ingresos = vivos.filter((c) => isUserIncome(c.type, c.direction) && pendiente(c) && c.currency === "MXN");
   const gastosConIva = vivos.filter((c) => isUserExpense(c.type, c.direction) && c.taxes.ivaTrasladado > 0 && pendiente(c));
   const conRetencion = vivos.filter((c) => isUserIncome(c.type, c.direction) && pendiente(c) && (c.taxes.isrRetenido > 0 || c.taxes.ivaRetenido > 0));
   const ppdSinComplemento = cfdis.filter((c) => c.status === "pendienteComplemento");
@@ -58,7 +61,7 @@ export function pendingActionsFromCfdis(
       id: "cfdi-confirmar-ingresos",
       type: "confirmar_ingreso",
       title: `Confirmar ${ingresos.length} ${ingresos.length === 1 ? "ingreso" : "ingresos"} cobrado${ingresos.length === 1 ? "" : "s"}`,
-      description: `Detectamos ${ingresos.length} CFDI de ingreso (${mxn(total)} aprox.). Asumimos que los de pago en una exhibición (PUE) ya se cobraron —es un supuesto—; confírmalos para fijar tu base de ISR sobre lo efectivamente cobrado.`,
+      description: `Detectamos ${ingresos.length} ${ingresos.length === 1 ? "ingreso" : "ingresos"} cobrable${ingresos.length === 1 ? "" : "s"} en MXN (${mxn(total)} aprox.). Asumimos que los de pago en una exhibición (PUE) ya se cobraron —es un supuesto—; confírmalos para fijar tu base de ISR.${ppdSinComplemento.length > 0 ? ` (${ppdSinComplemento.length} ingreso${ppdSinComplemento.length === 1 ? "" : "s"} PPD se cuenta${ppdSinComplemento.length === 1 ? "" : "n"} aparte hasta su complemento.)` : ""}`,
       urgency: baseUrg,
       impact: "define tu base de ISR del mes",
       risk: "bajo",

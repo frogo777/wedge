@@ -31,23 +31,37 @@
 
 ## Resultados esperados (con `wedge-cfdi-synthetic-pack.zip`)
 
-| Qué | Esperado |
+> Números **exactos**, verificados por el test de reconciliación `synthetic-reconciliation.vitest.ts`
+> (reconciliados con R7.4B). Requiere el deploy con el fix de encoding (R7.4B) para que el caso ISO cuente.
+
+**Fiscal Inbox (`/app/cfdis`):**
+| Métrica | Esperado |
 |---|---|
-| Carga | Procesa sin tronar; muestra "N CFDIs leídos en este navegador" |
-| CFDIs detectados | ~12 (junio) |
-| Ingresos | Sí — varios ingresos emitidos |
-| **Ingresos cobrados (aprox)** | **≈ $58,000** (5 ingresos de $10k + 1 de $8k; el PPD/USD no cuentan) |
-| Gastos | Sí — 2 gastos recibidos (uno deducible G03, uno "por revisar" S01) |
-| **Retenciones** | **Detectadas, NO en $0** (ISR ≈ $375 total; incl. una a nivel documento) |
-| Retención a nivel documento (caso 05) | Se lee (no queda en $0) — valida el fix F1 |
-| PPD (caso 06) | Marcado "pendiente de complemento"; **no** contado como cobrado |
-| REP (caso 07) | **No** contado como ingreso nuevo |
-| USD (caso 11) | **Excluido** del cálculo + aviso de moneda |
-| Encoding ISO (caso 12) | Si se mostrara un nombre, **con acentos correctos** (sin "�") |
-| Gasto S01 (caso 09) | **No** asumido deducible (por revisar) |
-| luk | Al menos una señal/explicación útil (retenciones / PPD / gastos por revisar) |
-| Snapshot | Guarda y persiste tras recargar; **sin** RFC/UUID/XML crudos |
-| Multi-mes (opcional) | Sube `wedge-cfdi-multimonth.zip` → aviso "varios meses" |
+| CFDIs detectados (total) | **12** |
+| Ingresos | **8** (incluye PPD y USD como "detectados") |
+| Gastos | **2** (G03 deducible · S01 por revisar) |
+| Requieren revisión | **6** (las 3 con retención + egreso + USD) |
+| Ingresos detectados ($) | **$50,000–$58,000**: el monto canónico es **$58,000** (USD excluido). *Si ves $50,000 y solo 11 CFDIs → el caso ISO se cayó: falta el deploy de R7.4B.* |
+| **Retenciones** | **$3,575** = ISR **$375** + IVA **$3,200** (incluye la del caso 05 a nivel documento) |
+| Cancelados | **0** (el pack no incluye un cancelado; el estatus de cancelación no viaja en el XML) |
+| Pendientes de complemento (PPD) | **1** (caso 06) |
+| luk | **≥1 señal** — principal: PPD sin complemento |
+
+**Mes Fiscal (`/app/mes`):**
+| Métrica | Esperado |
+|---|---|
+| CFDIs leídos | **12** |
+| Siguiente acción | **"Confirmar 6 ingresos cobrados"** por **$58,000** (6 = los 5 de $10k + el ISO de $8k; ya **no** infla con el USD) |
+| ISR/IVA | Estimado informativo (sube/baja al excluir CFDIs en el Inbox) |
+
+**Por caso:** retención nivel-documento (05) se lee (no $0) · PPD (06) "pendiente de complemento", no cobrado ·
+REP (07) no es ingreso nuevo · gasto G03 (08) deducible / S01 (09) por revisar · egreso (10) por revisar ·
+USD (11) excluido del cálculo + aviso de moneda · ISO (12) acentos correctos (sin "�"). Multi-mes: sube
+`wedge-cfdi-multimonth.zip` → aviso "varios meses".
+
+> **Por qué Inbox dice 8 ingresos y Mes dice 6:** el Inbox cuenta **todos** los ingresos detectados (incluye
+> el PPD y el USD); el Mes Fiscal cuenta los **6 cobrables en MXN** que puedes confirmar ya (el PPD va aparte
+> hasta su complemento; el USD se excluye por moneda). Ambas cifras son correctas — miden cosas distintas.
 
 ## Qué reportarme (anonimizado)
 - ¿Cargó sin tronar? ¿Cuántos CFDIs detectó?
