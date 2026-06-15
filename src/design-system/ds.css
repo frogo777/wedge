@@ -1,0 +1,138 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Wedge Design System — CSS variables (Fase 2)
+
+   Dark-only, grafito premium. Variables namespaced `--wds-*` para NO colisionar
+   con el sistema light heredado (`--background`, `--orange`, etc.).
+
+   Se exponen en :root (disponibles globalmente, pero sin override de nada
+   existente). El look dark del DS se activa montando `.wds-root` en el
+   contenedor (p.ej. el layout de /dev/design-system y, en Fase 3, AppShell).
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Brand (Fase 2.5A — color calibration) ──
+   * El LOGO conserva #F36F21 (var --wds-orange-logo, usado solo por LogoLockup).
+   * La UI usa un naranja más MADURO: menos saturado/limpio, "burnt"; el hover
+   * OSCURECE (restraint Apple, no brilla). El naranja es ~3% de la pantalla. */
+  --wds-orange-logo:    #F36F21;  /* marca — SOLO logo */
+  --wds-orange:         #E65F1A;  /* UI / CTA / acción */
+  --wds-orange-hover:   #C94F16;  /* burnt — hover oscurece */
+  --wds-orange-pressed: #AC4310;
+  --wds-orange-muted:   rgba(243, 111, 33, 0.10);  /* soft surface (tinte cálido) */
+  --wds-orange-ink:     #E8A074;  /* texto/acento naranja cálido, legible */
+
+  /* ── Backgrounds — warm graphite, sin negro puro ── */
+  --wds-bg-primary:   #090D12;  /* deep graphite (canvas) */
+  --wds-bg-secondary: #0D121A;  /* secciones hundidas */
+  --wds-bg-tertiary:  #131922;  /* tracks / strips */
+
+  /* ── Surfaces ── */
+  --wds-surface-primary:   #10151D;  /* graphite surface (card) */
+  --wds-surface-secondary: #1D2530;  /* soft surface (hover/well — más claro) */
+  --wds-surface-elevated:  #161C26;  /* elevated (modal/popover) */
+
+  /* ── Text — cálido (no blanco frío sintético) ── */
+  --wds-text-primary:   #F4F1EA;  /* warm text */
+  --wds-text-secondary: #C9C3B8;  /* muted warm */
+  --wds-text-muted:     #98948C;  /* helper/caption — warm gray (AA ✓) */
+  --wds-text-inverse:   #0E1116;  /* sobre naranja / superficies claras */
+
+  /* ── Border — hairlines discretas (menos visibles que antes) ── */
+  --wds-border-subtle: #1B232E;
+  --wds-border-strong: #2A3340;
+  --wds-border-focus:  #E65F1A;
+
+  /* ── Trust (slate / blue-gray — sobrio, no genérico) ── */
+  --wds-trust-bluegray: #64748B;
+  --wds-trust-slate:    #334155;
+  --wds-trust-panel:    #16202C;  /* panel sobrio slate-grafito */
+  --wds-trust-ink:      #94A3B8;  /* soft steel */
+
+  /* ── States — maduros, menos brillantes (no neón) ── */
+  --wds-success:     #4D9F6F;
+  --wds-success-bg:  rgba(77, 159, 111, 0.13);
+  --wds-success-ink: #8FCBA6;
+  --wds-warning:     #C9933A;
+  --wds-warning-bg:  rgba(201, 147, 58, 0.13);
+  --wds-warning-ink: #E0B879;
+  --wds-danger:      #D85C4A;
+  --wds-danger-bg:   rgba(216, 92, 74, 0.13);
+  --wds-danger-ink:  #ED9385;
+  --wds-info:        #6F8FAF;
+  --wds-info-bg:     rgba(111, 143, 175, 0.13);
+  --wds-info-ink:    #A9C0D6;
+  --wds-neutral:     #98948C;
+  --wds-neutral-bg:  rgba(152, 148, 140, 0.10);
+}
+
+/* ── Raíz del sistema dark ──────────────────────────────────────────────
+   Monta el canvas grafito + tipografía Geist + color-scheme dark. Aplicar en
+   el contenedor que use el DS (preview, y Fase 3: AppShell/PublicShell). */
+.wds-root {
+  background: var(--wds-bg-primary);
+  color: var(--wds-text-primary);
+  color-scheme: dark;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv01", "ss01";
+}
+
+/* Foco accesible único del sistema (naranja, siempre visible por teclado). */
+.wds-root :focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(230, 95, 26, 0.30);
+  border-radius: 6px;
+}
+
+/* Scrollbars sobrios en dark. */
+.wds-root ::-webkit-scrollbar { width: 10px; height: 10px; }
+.wds-root ::-webkit-scrollbar-track { background: var(--wds-bg-secondary); }
+.wds-root ::-webkit-scrollbar-thumb {
+  background: var(--wds-border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--wds-bg-secondary);
+}
+.wds-root ::-webkit-scrollbar-thumb:hover { background: #3d4a5d; }
+
+/* Datos fiscales: utilidad para números tabulares en mono. */
+.wds-mono {
+  font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Selección con tinte de marca. */
+.wds-root ::selection {
+  background: rgba(230, 95, 26, 0.26);
+  color: #fff;
+}
+
+/* Motion: respetar preferencia del sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .wds-root *, .wds-root *::before, .wds-root *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Spinner del sistema (LoadingState / botones loading). */
+@keyframes wds-spin { to { transform: rotate(360deg); } }
+@keyframes wds-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes wds-indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+/* ── Utilidades responsive (Fase 3A — web pública) ──────────────────────
+   SSR-safe (sin flash de hidratación). Mobile breakpoint del DS = 860px. */
+.wds-nav-links { display: flex; align-items: center; gap: 2px; }
+.wds-hide-sm { display: revert; }
+.wds-only-sm { display: none; }
+@media (max-width: 860px) {
+  .wds-nav-links { display: none; }
+  .wds-hide-sm { display: none !important; }
+  .wds-only-sm { display: revert; }
+}
+/* Grid de columnas que colapsa a 1 en mobile (para hero/secciones). */
+.wds-cols-2 { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; }
+@media (max-width: 920px) { .wds-cols-2 { grid-template-columns: 1fr; gap: 32px; } }
