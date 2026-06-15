@@ -26,6 +26,13 @@ Borrar el proyecto duplicado **`wedge`** (NO `wedge-4r7s`):
 > El agente no borra proyectos (acción destructiva irreversible). Si prefieres conservarlo "por si acaso",
 > al menos déjalo claramente marcado como duplicado y nunca le pongas dominio.
 
+## Confirmación R-now (2026-06-15)
+
+Re-verificado vía MCP (`list_projects`): **ambos proyectos siguen existiendo** — `wedge-4r7s`
+(`prj_Xz3beokq8BNOgwd1WhleoYMi5FIj`, vivo) y `wedge` (`prj_I2hldkryrGHxH7jWTu2sdDcOXkAO`, duplicado ERROR).
+El founder **aún no ha borrado** `wedge`. El agente **no puede borrarlo** (no hay tool de borrado en el MCP de
+Vercel + es destructivo irreversible) → queda como acción manual del founder con los pasos de arriba.
+
 ## Notas
 
 - El **dominio de prueba** hoy es `https://wedge-4r7s.vercel.app`. Cuando definas dominio propio

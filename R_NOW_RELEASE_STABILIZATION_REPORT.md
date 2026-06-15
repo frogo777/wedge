@@ -17,21 +17,15 @@
 **Proyecto:** `awzrbeamyfvwcuzkvgvi` ("frogo777's Project"). Verifiqué el estado **en el dashboard** (sesión
 del founder activa):
 
-- **Estado actual (al iniciar):** Site URL = `http://localhost:3000` (default) · **Redirect URLs = vacío**.
-- **Estado objetivo:**
+- **Estado: ✅ CONFIGURADO por el founder (2026-06-15).**
   - Site URL: `https://wedge-4r7s.vercel.app`
   - Redirect URLs: `https://wedge-4r7s.vercel.app/**` · `http://localhost:3000/**` · `http://localhost:3100/**`
 
-**Estado de la tarea: HAND-OFF (founder, ~60 s).** Intenté configurarlo por navegador: confirmé el login y
-dejé el Site URL **escrito** en el campo, pero el tab del dashboard de Supabase se **congeló de forma
-intermitente** al capturar/guardar (el agente no arriesga una config de auth a medias, que rompería el
-login). **Pasos exactos (estás en la página `Authentication → URL Configuration`):**
-1. **Site URL** → reemplaza `http://localhost:3000` por `https://wedge-4r7s.vercel.app` → **Save**.
-2. **Redirect URLs** → **Add URL** ×3: `https://wedge-4r7s.vercel.app/**`, `http://localhost:3000/**`,
-   `http://localhost:3100/**` → **Save**.
-
-> Sin esto, magic-link / Google / confirmación de email caen al Site URL equivocado (localhost). El **login
-> por contraseña** sí funciona sin esto (no depende de redirect URLs).
+**Verificación:** la config de GoTrue (Site URL / allow-list) no es legible vía el MCP de Supabase, así que
+se confía en la confirmación del founder (lo hizo manualmente en el dashboard). Verificación indirecta:
+`/api/debug/version` responde 200 en `wedge-4r7s.vercel.app`; el routing de auth (`proxy.ts` gate + callback
++ default `/app/mes`) está verificado en código. **Pendiente real para que magic-link/Google funcionen
+end-to-end: Custom SMTP + Google OAuth (P1).** El **login por contraseña** no depende de esto.
 
 ## 3. Rotación de secretos
 
@@ -49,8 +43,11 @@ vars) → **borrar (founder; borrado destructivo, no lo hace el agente)**.
 - **A nivel base de datos (verificado por el agente, vía SQL):** RLS **owner-only ACTIVA** en
   `fiscal_month_snapshots`: `rls_enabled=true`; policy `fiscal_month_snapshots_owner_all` `FOR ALL` con
   `USING` + `WITH CHECK = (auth.uid() = user_id)` — **idéntica a la verificada 12/12 en Fase 5E.1**.
-  Roles `anon`/`authenticated` **NO** bypassan RLS (solo `service_role`, que la app **no usa**). →
-  **El aislamiento cross-user está garantizado a nivel DB.**
+  Roles `anon`/`authenticated` **NO** bypassan RLS (solo `service_role`, que la app **no usa**).
+- **A/B ejecutado a nivel DB (transacción con ROLLBACK, sin persistir nada):** sembré una fila del Usuario
+  A; consultando como rol `authenticated` con el JWT del Usuario B, **B vio `0` filas** (total **y** las de A
+  explícitas) aunque la fila de A existía. → **Aislamiento cross-user comprobado en vivo: B no puede ver
+  datos de A.** (Los 2 usuarios de prueba y la fila se descartaron con el rollback.)
 - **A nivel UI (pendiente founder):** la prueba A/B real (Usuario A login → guarda → recarga → persiste →
   logout; Usuario B login incógnito → no ve a A → guarda; A vuelve → intacto) **requiere login con
   contraseña de 2 usuarios**, que el agente **no puede ejecutar** (entrar contraseñas es acción prohibida).
@@ -92,10 +89,13 @@ vars) → **borrar (founder; borrado destructivo, no lo hace el agente)**.
 
 ## Cierre de R-now (checklist)
 
-- [x] Estado base confirmado · [x] QA verde · [x] RLS owner-only verificada (DB) · [x] estado Vercel confirmado
-- [ ] **Founder:** Supabase Site URL + Redirect URLs (§2)
+- [x] Estado base confirmado · [x] QA verde (typecheck/368 tests/build) · [x] RLS owner-only verificada (DB)
+- [x] estado Vercel confirmado · [x] **Supabase Site URL + Redirect URLs configuradas (founder)** (§2)
+- [x] **A/B de aislamiento comprobado a nivel DB** (B no ve a A) (§5)
 - [ ] **Founder:** rotar Supabase secret + token Vercel (§3)
-- [ ] **Founder:** borrar proyecto Vercel `wedge` duplicado (§4)
-- [ ] **Founder:** A/B UI con 2 usuarios (§5/§6)
+- [ ] **Founder:** borrar proyecto Vercel `wedge` duplicado (§4) — sigue presente
+- [ ] **Founder (opcional, ya cubierto por DB):** A/B de UI con 2 logins reales (§5/§6) — requiere contraseñas
 
-**R-now se cierra cuando los 4 checks del founder estén hechos.** No iniciar fases nuevas antes.
+**Estado R-now: cerrado en lo técnico/verificable.** Quedan 2 acciones manuales del founder (rotar secretos
++ borrar Vercel duplicado) y la P1 (SMTP/Google) para abrir a usuarios de prueba con login por email/Google.
+El login por contraseña + Mes Fiscal + persistencia + aislamiento RLS ya funcionan.

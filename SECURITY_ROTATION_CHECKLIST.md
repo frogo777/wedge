@@ -33,3 +33,9 @@
 - [ ] Supabase secret key — **rotar (founder)**
 - [ ] Vercel token `vck_…` — **revocar (founder)**
 - [x] anon key — no requiere rotación (pública)
+
+## Re-revisión R-now (2026-06-15)
+
+Re-auditado al cierre de R-now: **no se imprimieron ni usaron secretos nuevos** en este turno (la migración,
+A/B y verificaciones se hicieron por MCP OAuth, sin la secret ni el token). Las 2 rotaciones pendientes
+siguen siendo acción del founder; nada nuevo que rotar.
