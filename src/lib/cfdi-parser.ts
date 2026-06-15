@@ -339,56 +339,48 @@ function extractNominaFromDom(doc: Document): CFDINomina | undefined {
 }
 
 function extractImpuestosFromDom(doc: Document): CFDIImpuestos {
-  const trasladados: CFDITraslado[] = [];
-  const retenidos:   CFDIRetencion[] = [];
-
-  // Walk every element whose local name is "Traslado" or "Retencion".
-  // This catches both the document-level <cfdi:Impuestos> block and the
-  // per-Concepto <cfdi:Impuestos> blocks — we union them.
-  //
-  // CFDI 4.0 duplicates totals: the document-level Traslados aggregate the
-  // per-Concepto Traslados. To avoid double-counting we only read the
-  // per-Concepto <Traslado> / <Retencion> nodes — they always exist when
-  // impuestos apply. If only the document-level block is present (rare),
-  // we fall back to it.
+  // CFDI 4.0 lleva impuestos por-Concepto y un bloque agregado a nivel documento.
+  // R7.3 (F1): se elige POR TIPO (Traslado / Retencion) — se prefiere per-concepto y se
+  // cae al bloque de documento SOLO para el tipo que no exista en conceptos. Antes era
+  // todo-o-nada (`source = conceptoImpuestos.length>0 ? concepto : documento`): si había
+  // CUALQUIER impuesto por concepto, se ignoraba el bloque de documento, perdiendo las
+  // RETENCIONES de plataformas (Uber/MercadoLibre/Amazon) que suelen vivir solo a nivel
+  // documento mientras los Traslados van por concepto → retención leída en 0. No duplica:
+  // si un tipo existe per-concepto NO se lee también su agregado de documento.
   const allEls = Array.from(doc.getElementsByTagName("*"));
-  const conceptoImpuestos = allEls.filter(el => {
-    if (localName(el.nodeName) !== "Traslado" && localName(el.nodeName) !== "Retencion") return false;
-    // Is it inside a Concepto? (per-concepto block)
+  const isImpuesto = (el: Element) =>
+    localName(el.nodeName) === "Traslado" || localName(el.nodeName) === "Retencion";
+  const inConcepto = (el: Element): boolean => {
     let p = el.parentElement;
     while (p) {
       if (localName(p.nodeName) === "Concepto") return true;
       p = p.parentElement;
     }
     return false;
-  });
-  const documentImpuestos = allEls.filter(el => {
-    if (localName(el.nodeName) !== "Traslado" && localName(el.nodeName) !== "Retencion") return false;
-    let p = el.parentElement;
-    while (p) {
-      if (localName(p.nodeName) === "Concepto") return false;
-      p = p.parentElement;
-    }
-    return true;
-  });
+  };
 
-  const source = conceptoImpuestos.length > 0 ? conceptoImpuestos : documentImpuestos;
+  const impuestoEls = allEls.filter(isImpuesto);
+  const conceptoEls = impuestoEls.filter(inConcepto);
+  const documentEls = impuestoEls.filter((el) => !inConcepto(el));
 
-  for (const el of source) {
-    const tag     = localName(el.nodeName);
-    const imp     = (el.getAttribute("Impuesto") || "") as CFDIImpuestoCode;
-    const importe = toNum(el.getAttribute("Importe"));
-    if (tag === "Traslado") {
-      const tasaRaw = el.getAttribute("TasaOCuota");
-      trasladados.push({
-        impuesto: imp,
-        tasa:     tasaRaw ? toNum(tasaRaw) : undefined,
-        importe,
-      });
-    } else {
-      retenidos.push({ impuesto: imp, importe });
-    }
-  }
+  const pickByKind = (kind: "Traslado" | "Retencion"): Element[] => {
+    const c = conceptoEls.filter((el) => localName(el.nodeName) === kind);
+    const d = documentEls.filter((el) => localName(el.nodeName) === kind);
+    return c.length > 0 ? c : d;
+  };
+
+  const trasladados: CFDITraslado[] = pickByKind("Traslado").map((el) => {
+    const tasaRaw = el.getAttribute("TasaOCuota");
+    return {
+      impuesto: (el.getAttribute("Impuesto") || "") as CFDIImpuestoCode,
+      tasa:     tasaRaw ? toNum(tasaRaw) : undefined,
+      importe:  toNum(el.getAttribute("Importe")),
+    };
+  });
+  const retenidos: CFDIRetencion[] = pickByKind("Retencion").map((el) => ({
+    impuesto: (el.getAttribute("Impuesto") || "") as CFDIImpuestoCode,
+    importe:  toNum(el.getAttribute("Importe")),
+  }));
 
   return summarizeImpuestos(trasladados, retenidos);
 }

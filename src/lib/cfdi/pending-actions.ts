@@ -58,7 +58,7 @@ export function pendingActionsFromCfdis(
       id: "cfdi-confirmar-ingresos",
       type: "confirmar_ingreso",
       title: `Confirmar ${ingresos.length} ${ingresos.length === 1 ? "ingreso" : "ingresos"} cobrado${ingresos.length === 1 ? "" : "s"}`,
-      description: `Detectamos ${ingresos.length} CFDI de ingreso (${mxn(total)} aprox.). Confírmalos para fijar tu base de ISR del mes.`,
+      description: `Detectamos ${ingresos.length} CFDI de ingreso (${mxn(total)} aprox.). Asumimos que los de pago en una exhibición (PUE) ya se cobraron —es un supuesto—; confírmalos para fijar tu base de ISR sobre lo efectivamente cobrado.`,
       urgency: baseUrg,
       impact: "define tu base de ISR del mes",
       risk: "bajo",

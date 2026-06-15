@@ -34,7 +34,7 @@ export function redactedToNormalized(r: RedactedCfdi): NormalizedCfdi {
     currency: r.currency,
     paymentMethod: r.paymentMethod,
     paymentForm: r.paymentForm,
-    cfdiUse: "",
+    cfdiUse: r.cfdiUse ?? "",
     status: r.status,
     taxes: r.taxes,
     concepts: [],

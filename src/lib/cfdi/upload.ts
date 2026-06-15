@@ -11,7 +11,7 @@
  * ejecuta). Sin persistencia, sin SAT, sin e.firma/CIEC. "Wedge prepara; tú validas en SAT."
  */
 
-import { unzipSync, strFromU8 } from "fflate";
+import { unzipSync } from "fflate";
 import type { ParsedCFDI } from "@/lib/cfdi-parser";
 import { parseMany } from "./parse";
 import { normalizeCfdi } from "./normalize";
@@ -106,11 +106,37 @@ export function validateCfdiFiles(files: File[]): { valid: File[]; issues: Uploa
   return { valid, issues };
 }
 
-/** Lee un archivo .xml como texto. Falla seguro. */
+/**
+ * Decodifica bytes de XML respetando el encoding declarado en el prólogo (R7.3 F2).
+ * `file.text()` / `strFromU8` asumen UTF-8 siempre; CFDIs reales de algunos PAC vienen en
+ * ISO-8859-1 / Windows-1252 y se verían con mojibake en nombres/descripciones. Sin dependencias
+ * (TextDecoder nativo). Montos/RFC son ASCII → el cálculo no cambia; esto arregla el texto.
+ */
+function sniffXmlEncoding(bytes: Uint8Array): string {
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return "utf-8"; // BOM
+  const n = Math.min(bytes.length, 256);
+  let head = "";
+  for (let i = 0; i < n; i++) head += String.fromCharCode(bytes[i]);
+  const m = /encoding\s*=\s*["']([^"']+)["']/i.exec(head);
+  const enc = (m?.[1] || "utf-8").trim().toLowerCase();
+  if (enc === "latin1" || enc === "iso8859-1" || enc === "iso-8859-1") return "iso-8859-1";
+  if (enc === "cp1252" || enc === "windows-1252") return "windows-1252";
+  return enc;
+}
+
+export function decodeXmlBytes(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder(sniffXmlEncoding(bytes), { fatal: false }).decode(bytes);
+  } catch {
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  }
+}
+
+/** Lee un archivo .xml como texto, respetando su encoding declarado. Falla seguro. */
 export async function readXmlFile(file: File): Promise<Payload | UploadIssue> {
   try {
-    const text = await file.text();
-    return { name: file.name, text };
+    const buf = new Uint8Array(await file.arrayBuffer());
+    return { name: file.name, text: decodeXmlBytes(buf) };
   } catch {
     return { file: file.name, code: "read_error", message: "No pudimos leer este XML." };
   }
@@ -184,7 +210,7 @@ export async function readZipFile(file: File): Promise<{ payloads: Payload[]; is
   const payloads: Payload[] = [];
   for (const [name, data] of Object.entries(entries)) {
     try {
-      payloads.push({ name: `${file.name} › ${name}`, text: strFromU8(data) });
+      payloads.push({ name: `${file.name} › ${name}`, text: decodeXmlBytes(data) });
     } catch {
       issues.push({ file: `${file.name} › ${name}`, code: "read_error", message: "No pudimos decodificar un XML del ZIP." });
     }
@@ -327,6 +353,8 @@ export interface RedactedCfdi {
   currency: string;
   paymentMethod: string | null;
   paymentForm: string | null;
+  /** UsoCFDI (catálogo c_UsoCFDI; NO es PII) — para gatear deducibilidad al recomputar (R7.3 F3). */
+  cfdiUse: string;
   taxes: NormalizedCfdi["taxes"];
   conceptCount: number;
   warnings: string[];
@@ -344,6 +372,7 @@ export function redactCfdiForClient(cfdi: NormalizedCfdi): RedactedCfdi {
     currency: cfdi.currency,
     paymentMethod: cfdi.paymentMethod,
     paymentForm: cfdi.paymentForm,
+    cfdiUse: cfdi.cfdiUse,
     taxes: cfdi.taxes,
     conceptCount: cfdi.concepts.length,
     warnings: cfdi.warnings,

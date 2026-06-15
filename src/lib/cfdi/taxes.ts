@@ -19,6 +19,23 @@ function dateOnly(iso: string): string {
   return (iso || "").slice(0, 10);
 }
 
+/**
+ * UsoCFDI (c_UsoCFDI 4.0) con intención claramente deducible/acreditable:
+ * G01/G02/G03 (gastos/mercancías), I01–I08 (inversiones), D01–D10 (deducciones personales).
+ * Si el UsoCFDI NO es claro (S01 sin efectos, CP01 pagos, CN01 nómina, vacío o desconocido),
+ * NO se asume deducible — el gasto queda "por confirmar" (no se acredita hasta que el usuario lo revise).
+ * R7.3 (F3): antes todo gasto recibido se asumía deducible; esto evita inflar deducciones con datos reales.
+ */
+const DEDUCTIBLE_USO_RE = /^(G0[123]|I0[1-8]|D(0[1-9]|10))$/;
+export function isLikelyDeductibleUso(uso: string | null | undefined): boolean {
+  return DEDUCTIBLE_USO_RE.test((uso || "").trim().toUpperCase());
+}
+
+/** Etiqueta genérica NO-PII para la descripción (R7.3 F6: evita acarrear el nombre fiscal del emisor). */
+function genericCfdiLabel(dir: NormalizedCfdi["direction"]): string {
+  return dir === "emitido" ? "CFDI emitido" : dir === "recibido" ? "CFDI recibido" : "Movimiento fiscal";
+}
+
 /** Estatus para el motor tax: cancelado → "cancelado"; resto timbrado/vigente. */
 function txCfdiStatus(c: NormalizedCfdi): Transaction["cfdi_status"] {
   return c.status === "cancelado" ? "cancelado" : "timbrado";
@@ -56,7 +73,7 @@ export function cfdiToTransaction(c: NormalizedCfdi): Transaction | null {
   const cobrado = c.paymentMethod !== "PPD" && c.status !== "pendienteComplemento";
   const base: Omit<Transaction, "type"> = {
     id: c.id,
-    description: c.concepts[0]?.description || c.issuerName || "CFDI",
+    description: c.concepts[0]?.description || genericCfdiLabel(c.direction),
     amount: c.subtotal,
     date: dateOnly(c.issuedAt),
     category: null,
@@ -81,8 +98,9 @@ export function cfdiToTransaction(c: NormalizedCfdi): Transaction | null {
   }
 
   if (isUserExpense(c.type, c.direction)) {
-    // Gasto: IVA acreditable solo si el motor lo valida (deducible + vigente + bancarizado).
-    return { ...base, type: "out", es_deducible: true };
+    // Gasto: deducible solo si el UsoCFDI lo sugiere claramente (R7.3 F3). Si no es claro, no se
+    // asume; el motor solo acredita IVA / resta base si es_deducible + vigente + bancarizado.
+    return { ...base, type: "out", es_deducible: isLikelyDeductibleUso(c.cfdiUse) };
   }
 
   // egreso / nómina / traslado / dirección desconocida → no se suma automáticamente.
@@ -102,9 +120,14 @@ export interface CfdiTaxSummary {
   isrRetenido: number;
 }
 
-/** Resumen rápido (no fiscal-definitivo) de los CFDIs vivos del usuario. */
+/**
+ * Resumen rápido (no fiscal-definitivo) de los CFDIs vivos del usuario.
+ * NOTA: NO se usa en páginas de usuario — los números que ve el usuario salen del motor canónico
+ * (`fiscalMonthFromCfdis`). Se conserva para tests/diagnóstico. R7.3 (F5): excluye moneda != MXN
+ * (consistente con `cfdiToTransaction`) para no mezclar USD/EUR sin tipo de cambio.
+ */
 export function summarizeCfdiTaxes(cfdis: NormalizedCfdi[]): CfdiTaxSummary {
-  const vivos = cfdis.filter((c) => c.status !== "cancelado");
+  const vivos = cfdis.filter((c) => c.status !== "cancelado" && c.currency === "MXN");
   const ingresos = vivos.filter((c) => isUserIncome(c.type, c.direction));
   const gastos = vivos.filter((c) => isUserExpense(c.type, c.direction));
   return {
