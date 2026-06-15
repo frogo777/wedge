@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SINTÉTICO — datos falsos para pruebas de Wedge. NO es un CFDI válido para el SAT. -->
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" Fecha="2026-06-10T10:00:00" SubTotal="3000.00" Total="3480.00" Moneda="MXN" TipoDeComprobante="I" MetodoPago="PUE" FormaPago="01" Exportacion="01" LugarExpedicion="64000">
+  <cfdi:Emisor Rfc="PROV010101AB4" Nombre="Proveedor Sintetico SA de CV" RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="SYNU010101AB1" Nombre="Persona Sintetica Demo" DomicilioFiscalReceptor="64000" RegimenFiscalReceptor="626" UsoCFDI="S01"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="84111506" Cantidad="1" ClaveUnidad="E48" Descripcion="Consumo varios" ValorUnitario="3000.00" Importe="3000.00" ObjetoImp="02"><cfdi:Impuestos><cfdi:Traslados><cfdi:Traslado Base="3000" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="480.00"/></cfdi:Traslados></cfdi:Impuestos></cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="480.00"><cfdi:Traslados><cfdi:Traslado Base="3000" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="480.00"/></cfdi:Traslados></cfdi:Impuestos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" Version="1.1" UUID="00000000-0000-4000-8000-000000000009" FechaTimbrado="2026-06-10T10:00:00" SelloCFD="SINTETICO" NoCertificadoSAT="00000000000000000000"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>

@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage --reporter=default"
+    "test:coverage": "vitest run --coverage --reporter=default",
+    "fixtures:cfdi": "node scripts/generate-synthetic-cfdi-pack.mjs"
   },
   "overrides": {
     "uuid": "^11.1.1"
