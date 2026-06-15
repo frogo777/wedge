@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * /soporte — migrada al Wedge Fiscal OS Design System (Fase 3B.3).
+ * /soporte — Wedge Fiscal OS Design System.
  *
- * Client component: conserva el FORM real (POST /api/soporte), el prefill de email
- * por sesión (Supabase) y el toast. Se reskina al DS, se añaden rutas de auto-ayuda
- * y el CTA principal va a /diagnostico. Copy de contacto honesto (sin "24/7" inventado).
+ * Client component: el formulario NO hace POST a un backend inexistente. Compone un
+ * borrador de correo (mailto a hola@wedgemx.com) en el cliente del usuario, así nunca
+ * mostramos un "enviado" falso. Prefill de email por sesión (Supabase) y toast. CTA
+ * principal a /diagnostico. Copy de contacto honesto.
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -19,6 +20,8 @@ import { CtaLink } from "@/app/_public/CtaLink";
 import { useToast } from "@/app/_components/Toast";
 
 const FONT = wt.font.sans;
+
+const SUPPORT_EMAIL = "hola@wedgemx.com";
 
 type Motivo = "bug" | "pregunta" | "sugerencia" | "cancelacion";
 
@@ -57,7 +60,6 @@ export default function SoportePage() {
   const [email, setEmail] = useState("");
   const [motivo, setMotivo] = useState<Motivo>("pregunta");
   const [mensaje, setMensaje] = useState("");
-  const [submitting, setSub] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
@@ -75,7 +77,7 @@ export default function SoportePage() {
     return () => { cancelled = true; };
   }, []);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -86,30 +88,15 @@ export default function SoportePage() {
       setError("Cuéntanos un poco más (mínimo 10 caracteres).");
       return;
     }
-    setSub(true);
-    try {
-      const r = await fetch("/api/soporte", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, motivo, mensaje }),
-      });
-      const data: { ok?: boolean; error?: string } = await r.json().catch(() => ({}));
-      if (!r.ok || !data.ok) {
-        const msg = data.error || "No pudimos enviar tu mensaje. Vuelve a intentar.";
-        setError(msg);
-        toast.show({ kind: "error", title: "No se pudo enviar", message: msg });
-        setSub(false);
-        return;
-      }
-      setDone(true);
-      toast.show({ kind: "success", title: "Mensaje enviado", message: "Te respondemos por correo lo antes posible." });
-    } catch {
-      const msg = "Error de red. Verifica tu conexión.";
-      setError(msg);
-      toast.show({ kind: "error", message: msg });
-    } finally {
-      setSub(false);
-    }
+    // Sin backend de correo todavía: abrimos un borrador real en el cliente de correo
+    // del usuario (mailto). Nunca mostramos un "enviado" falso.
+    const motivoLabel = MOTIVO_OPTIONS.find((m) => m.id === motivo)?.label ?? motivo;
+    const subject = `Soporte Wedge — ${motivoLabel}`;
+    const body = `${mensaje.trim()}\n\n—\nResponder a: ${email}\nEnviado desde wedgemx.com/soporte`;
+    const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    if (typeof window !== "undefined") window.location.href = mailto;
+    setDone(true);
+    toast.show({ kind: "success", title: "Abriendo tu correo", message: `Te abrimos un borrador para ${SUPPORT_EMAIL}.` });
   };
 
   return (
@@ -147,18 +134,20 @@ export default function SoportePage() {
         </div>
       </section>
 
-      {/* ── Contacto (form real) ── */}
+      {/* ── Contacto (compone un correo real, sin backend) ── */}
       <section style={{ marginBottom: wt.space[9] }}>
         <h2 style={{ ...wt.text.h3, color: wt.color.text, margin: `0 0 ${wt.space[2]}px` }}>¿Necesitas escribirnos?</h2>
         <p style={{ ...wt.text.bodySm, color: wt.color.textMuted, margin: `0 0 ${wt.space[5]}px` }}>
-          Cuéntanos qué pasa con tu cuenta o tu mes. Te respondemos por correo lo antes posible.
+          Mientras activamos el correo automático, escríbenos directamente: preparamos un borrador para{" "}
+          <strong style={{ color: wt.color.text }}>{SUPPORT_EMAIL}</strong> con lo que escribas aquí.
         </p>
 
         {done ? (
           <Card variant="default" padding="comfortable">
-            <div style={{ ...wt.text.label, color: wt.color.text, marginBottom: wt.space[2] }}>¡Mensaje recibido!</div>
-            <p style={{ ...wt.text.bodySm, color: wt.color.textSecondary, margin: 0 }}>
-              Te respondemos por correo lo antes posible a <strong style={{ color: wt.color.text }}>{email}</strong>.
+            <div style={{ ...wt.text.label, color: wt.color.text, marginBottom: wt.space[2] }}>Te abrimos tu correo</div>
+            <p style={{ ...wt.text.bodySm, color: wt.color.textSecondary, margin: 0, lineHeight: 1.6 }}>
+              Abrimos un borrador para <strong style={{ color: wt.color.text }}>{SUPPORT_EMAIL}</strong> con tu mensaje. Si no se abrió tu app de correo, escríbenos directo a{" "}
+              <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: wt.color.orangeInk, textDecoration: "none", fontWeight: 560 }}>{SUPPORT_EMAIL}</a> desde <strong style={{ color: wt.color.text }}>{email}</strong>.
             </p>
             <div style={{ marginTop: wt.space[5] }}>
               <CtaLink href="/diagnostico" variant="secondary" size="md" rightIcon={<ArrowRight size={15} />}>
@@ -189,16 +178,14 @@ export default function SoportePage() {
 
               <button
                 type="submit"
-                disabled={submitting}
                 style={{
                   marginTop: wt.space[5], width: "100%", height: 48,
-                  background: submitting ? wt.color.borderStrong : wt.color.orange,
+                  background: wt.color.orange,
                   color: wt.color.textInverse, border: "none", borderRadius: wt.radius.md,
-                  fontSize: 15, fontWeight: 560, fontFamily: FONT,
-                  cursor: submitting ? "default" : "pointer",
+                  fontSize: 15, fontWeight: 560, fontFamily: FONT, cursor: "pointer",
                 }}
               >
-                {submitting ? "Enviando…" : "Enviar mensaje"}
+                Escribir por correo
               </button>
 
               <p style={{ ...wt.text.caption, color: wt.color.textMuted, textAlign: "center", marginTop: wt.space[4] }}>

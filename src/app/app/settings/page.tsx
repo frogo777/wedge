@@ -17,6 +17,7 @@ import { LogOut, ArrowRight } from "lucide-react";
 import { wt } from "@/design-system/tokens";
 import { AppShell, LogoLockup, PageHeader, Card, Button, SecurityNotice } from "@/design-system";
 import { AppSidebarNav } from "@/app/app/_components/AppSidebarNav";
+import { AppMobileNav } from "@/app/app/_components/AppMobileNav";
 import { createClient } from "@/lib/supabase/client";
 
 const legalLink: React.CSSProperties = {
@@ -123,6 +124,8 @@ export default function SettingsPage() {
           <Button variant="ghost" onClick={() => router.push("/app/mes")} leftIcon={<ArrowRight size={16} />}>Volver al Mes Fiscal</Button>
         </div>
       </section>
+
+      <AppMobileNav />
     </AppShell>
   );
 }

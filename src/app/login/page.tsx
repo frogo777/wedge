@@ -1,17 +1,12 @@
 "use client";
 
 /**
- * Login — migrado al Wedge Fiscal OS Design System (Fase 3B.1). Hermano de /signup.
+ * Login — Wedge Fiscal OS Design System. Hermano de /signup.
  *
- * La LÓGICA de auth NO se reescribió: se conserva el orden magic-link → Google →
- * password, el step-up AAL2 (→ /login/2fa), la traducción de errores, el estado
- * "enlace enviado" y el link a /forgot-password. Esta fase solo cambia presentación
- * y copy.
- *
- * Auth priority order (best UX first):
- *   1. Magic link (passwordless, default)
- *   2. Google OAuth
- *   3. Password (collapsed, expand on demand) → AAL2 step-up si aplica
+ * R7.1: en modo sin costo (sin SMTP ni Google OAuth configurados), el método PRINCIPAL y
+ * único activo es CONTRASEÑA. El enlace mágico y Google se muestran DESHABILITADOS con copy
+ * honesto ("Disponible cuando activemos el correo automático") para no prometer correos que
+ * no llegan. Se conserva el step-up AAL2 (→ /login/2fa) y la traducción de errores.
  */
 
 import { Suspense, useEffect, useState } from "react";
@@ -19,7 +14,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { wt } from "@/design-system/tokens";
-import { Button, Card, LogoLockup, SecurityNotice } from "@/design-system";
+import { Button, Card, LogoLockup, SecurityNotice, Badge } from "@/design-system";
 import { Eye, EyeOff, ArrowRight, Mail } from "lucide-react";
 
 const FONT = wt.font.sans;
@@ -64,19 +59,16 @@ function Login() {
   const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw]   = useState(false);
-  const [showPasswordField, setShowPasswordField] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
-  const [magicLoading, setMagicLoading] = useState(false);
-  const [magicSent, setMagicSent] = useState(false);
   const [error, setError]     = useState("");
 
   useEffect(() => {
     const e = searchParams?.get("error");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (e) setError(decodeURIComponent(e).slice(0, 200));
   }, [searchParams]);
 
-  // Destino post-login (Fase 4C): respeta ?next= interno; si no, el Mes Fiscal.
+  // Destino post-login: respeta ?next= interno; si no, el Mes Fiscal.
   // Excluye auth-pages para no crear loops (?next=/login).
   const rawNext = searchParams?.get("next");
   const nextDest = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
@@ -91,7 +83,7 @@ function Login() {
       return "Correo o contraseña incorrectos.";
     }
     if (m.includes("email not confirmed")) {
-      return "Tu correo aún no está verificado. Revisa tu bandeja de entrada.";
+      return "Tu correo aún no está verificado. Pide a soporte que active tu cuenta.";
     }
     if (m.includes("too many requests") || m.includes("rate limit")) {
       return "Demasiados intentos. Espera 1 minuto antes de volver a intentar.";
@@ -106,37 +98,7 @@ function Login() {
     if (m.includes("captcha")) {
       return "Necesitas resolver un captcha. Recarga la página e intenta de nuevo.";
     }
-    return "No pudimos completar el inicio de sesión. Intenta de nuevo o usa enlace mágico.";
-  };
-
-  const handleGoogle = async () => {
-    setError("");
-    setOauthLoading("google");
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextDest)}` },
-    });
-    if (error) {
-      setError("No pudimos abrir Google. Verifica que tu navegador no bloquee ventanas emergentes.");
-      setOauthLoading(null);
-    }
-  };
-
-  const handleMagicLink = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanEmail = normalizeEmail(email);
-    if (!cleanEmail) { setError("Escribe tu correo arriba primero."); return; }
-    setError("");
-    setMagicLoading(true);
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const { error } = await supabase.auth.signInWithOtp({
-      email: cleanEmail,
-      options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextDest)}`, shouldCreateUser: false },
-    });
-    setMagicLoading(false);
-    if (error) setError(translateAuthError(error.message));
-    else setMagicSent(true);
+    return "No pudimos completar el inicio de sesión. Intenta de nuevo.";
   };
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -162,8 +124,7 @@ function Login() {
     router.refresh();
   };
 
-  const canSubmit = email && (!showPasswordField || password);
-  const submitting = showPasswordField ? loading : magicLoading;
+  const canSubmit = !!email && !!password;
 
   return (
     <div className="wds-root" style={{
@@ -190,170 +151,101 @@ function Login() {
           Vuelve a tu mes fiscal.
         </h1>
         <p style={{ ...wt.text.body, color: wt.color.textMuted, margin: `${wt.space[3]}px 0 0` }}>
-          Retoma pendientes, diagnóstico y próximos pasos antes del día 17.
+          Entra con tu correo y contraseña. Retoma pendientes y próximos pasos antes del día 17.
         </p>
 
         <Card variant="default" padding="comfortable" style={{ marginTop: wt.space[7] }}>
-          {magicSent ? (
-            <div role="status" style={{
-              padding: "20px",
-              background: wt.color.successBg,
-              border: `1px solid rgba(77,159,111,0.33)`,
-              borderRadius: wt.radius.lg,
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-              textAlign: "center",
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: "50%",
-                background: "rgba(77,159,111,0.22)", color: wt.color.success,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Mail size={22} />
-              </div>
-              <div>
-                <div style={{ ...wt.text.label, color: wt.color.text, marginBottom: 4 }}>
-                  Revisa tu correo
-                </div>
-                <div style={{ ...wt.text.bodySm, color: wt.color.textMuted, lineHeight: 1.5 }}>
-                  Enviamos un enlace a <strong style={{ color: wt.color.text }}>{email}</strong>. Click ahí para entrar.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setMagicSent(false); setEmail(""); }}
-                style={{
-                  background: "transparent", border: "none", cursor: "pointer",
-                  color: wt.color.orange, fontSize: 12, fontWeight: 560, fontFamily: FONT,
-                  marginTop: 4,
-                }}
-              >
-                Usar otro correo
-              </button>
+          {/* Método principal: contraseña */}
+          <form onSubmit={handlePasswordLogin}>
+            <div style={{ marginBottom: 14 }}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@correo.com"
+                required
+                autoFocus
+                aria-label="Correo electrónico"
+                autoComplete="email"
+                inputMode="email"
+                style={inputBase}
+                onFocus={focusRing}
+                onBlur={blurRing}
+              />
             </div>
-          ) : (
-            <>
-              {/* Google */}
-              <button
-                type="button"
-                onClick={handleGoogle}
-                disabled={oauthLoading !== null || loading}
-                style={{
-                  width: "100%", height: 46, padding: "0 16px",
-                  background: wt.color.surface,
-                  border: `1px solid ${wt.color.border}`,
-                  borderRadius: wt.radius.md,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  fontSize: 14, fontWeight: 560, color: wt.color.text, fontFamily: FONT,
-                  cursor: oauthLoading ? "wait" : "pointer", marginBottom: 14,
-                  transition: `background ${wt.motion.base} ${wt.motion.ease}`,
-                }}
-                aria-label="Continuar con Google"
-              >
-                <GoogleG />
-                {oauthLoading === "google" ? "Abriendo Google…" : "Continuar con Google"}
-              </button>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0 16px" }}>
-                <div style={{ flex: 1, height: 1, background: wt.color.border }} />
-                <span style={{ ...wt.text.micro, color: wt.color.textMuted }}>o con correo</span>
-                <div style={{ flex: 1, height: 1, background: wt.color.border }} />
-              </div>
-
-              <form onSubmit={showPasswordField ? handlePasswordLogin : handleMagicLink}>
-                <div style={{ marginBottom: 14 }}>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu@correo.com"
-                    required
-                    aria-label="Correo electrónico"
-                    autoComplete="email"
-                    inputMode="email"
-                    style={inputBase}
-                    onFocus={focusRing}
-                    onBlur={blurRing}
-                  />
-                </div>
-
-                {showPasswordField && (
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ position: "relative" }}>
-                      <input
-                        type={showPw ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Contraseña"
-                        required
-                        aria-label="Contraseña"
-                        autoComplete="current-password"
-                        style={{ ...inputBase, paddingRight: 44 }}
-                        onFocus={focusRing}
-                        onBlur={blurRing}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPw(!showPw)}
-                        aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        style={{
-                          position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)",
-                          background: "none", border: "none", cursor: "pointer",
-                          color: wt.color.textMuted, padding: 12,
-                          minWidth: 44, minHeight: 44,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                        }}
-                      >
-                        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    <div style={{ marginTop: 6, textAlign: "right" }}>
-                      <Link href="/forgot-password" style={{ ...wt.text.caption, color: wt.color.orange, textDecoration: "none" }}>
-                        ¿Olvidaste tu contraseña?
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                {error && (
-                  <div role="alert" aria-live="assertive" style={{
-                    background: wt.color.dangerBg, border: `1px solid rgba(216,92,74,0.30)`,
-                    borderRadius: wt.radius.md, padding: "10px 14px", ...wt.text.bodySm, color: wt.color.dangerInk,
-                    marginBottom: 14,
-                  }}>
-                    {error}
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  loading={submitting}
-                  disabled={!canSubmit}
-                  leftIcon={!showPasswordField ? <Mail size={16} /> : undefined}
-                  rightIcon={showPasswordField ? <ArrowRight size={16} /> : undefined}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPw ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Contraseña"
+                  required
+                  aria-label="Contraseña"
+                  autoComplete="current-password"
+                  style={{ ...inputBase, paddingRight: 44 }}
+                  onFocus={focusRing}
+                  onBlur={blurRing}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  style={{
+                    position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer",
+                    color: wt.color.textMuted, padding: 12,
+                    minWidth: 44, minHeight: 44,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
                 >
-                  {showPasswordField
-                    ? (loading ? "Entrando…" : "Iniciar sesión")
-                    : (magicLoading ? "Enviando enlace…" : "Enviar enlace mágico")}
-                </Button>
-              </form>
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <div style={{ marginTop: 6, textAlign: "right" }}>
+                <Link href="/forgot-password" style={{ ...wt.text.caption, color: wt.color.orange, textDecoration: "none" }}>
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => { setShowPasswordField(!showPasswordField); setError(""); }}
-                style={{
-                  width: "100%", marginTop: 14,
-                  background: "transparent", border: "none", cursor: "pointer",
-                  color: wt.color.textMuted, fontSize: 12.5, fontWeight: 500,
-                  fontFamily: FONT, padding: "6px",
-                }}
-              >
-                {showPasswordField ? "← Volver a enlace mágico (sin contraseña)" : "Prefiero usar contraseña"}
-              </button>
-            </>
-          )}
+            {error && (
+              <div role="alert" aria-live="assertive" style={{
+                background: wt.color.dangerBg, border: `1px solid rgba(216,92,74,0.30)`,
+                borderRadius: wt.radius.md, padding: "10px 14px", ...wt.text.bodySm, color: wt.color.dangerInk,
+                marginBottom: 14,
+              }}>
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={loading}
+              disabled={!canSubmit}
+              rightIcon={<ArrowRight size={16} />}
+            >
+              {loading ? "Entrando…" : "Iniciar sesión"}
+            </Button>
+          </form>
+
+          {/* Métodos sociales / sin contraseña: deshabilitados hasta activar correo automático */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 14px" }}>
+            <div style={{ flex: 1, height: 1, background: wt.color.border }} />
+            <span style={{ ...wt.text.micro, color: wt.color.textMuted }}>más opciones</span>
+            <div style={{ flex: 1, height: 1, background: wt.color.border }} />
+          </div>
+
+          <DisabledMethod icon={<GoogleG />} label="Continuar con Google" />
+          <DisabledMethod icon={<Mail size={16} />} label="Enviar enlace mágico" />
+
+          <p style={{ ...wt.text.caption, color: wt.color.textMuted, textAlign: "center", margin: `${wt.space[3]}px 0 0` }}>
+            El acceso con Google y por enlace mágico estará disponible cuando activemos el correo automático.
+          </p>
         </Card>
 
         {/* Trust microcopy */}
@@ -369,6 +261,26 @@ function Login() {
           </Link>
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Botón de método de login deshabilitado (con badge "Pronto"); honesto en modo sin costo. */
+function DisabledMethod({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div
+      aria-disabled
+      style={{
+        width: "100%", height: 46, padding: "0 16px", marginBottom: 10,
+        background: wt.color.surface, border: `1px solid ${wt.color.border}`,
+        borderRadius: wt.radius.md, opacity: 0.6,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        ...wt.text.label, color: wt.color.textMuted, cursor: "not-allowed",
+      }}
+    >
+      <span style={{ display: "inline-flex" }}>{icon}</span>
+      <span>{label}</span>
+      <Badge variant="outline" size="sm">Pronto</Badge>
     </div>
   );
 }

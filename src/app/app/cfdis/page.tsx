@@ -18,6 +18,7 @@ import {
   Alert, Button, SecurityNotice, TrustPanel, PermissionList,
 } from "@/design-system";
 import { AppSidebarNav } from "@/app/app/_components/AppSidebarNav";
+import { AppMobileNav } from "@/app/app/_components/AppMobileNav";
 import { CfdiInboxItem } from "./CfdiInboxItem";
 import {
   loadCfdiPreview, clearCfdiPreview, redactPreviewForStorage,
@@ -317,6 +318,8 @@ export default function FiscalInboxPage() {
           </section>
         </>
       )}
+
+      <AppMobileNav />
     </AppShell>
   );
 }

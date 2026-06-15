@@ -24,6 +24,7 @@ import {
   TrustPanel, PermissionList, SecurityNotice,
 } from "@/design-system";
 import { AppSidebarNav } from "@/app/app/_components/AppSidebarNav";
+import { AppMobileNav } from "@/app/app/_components/AppMobileNav";
 import { getMockFiscalMonth, daysToDeadline } from "@/lib/mes/mock";
 import { loadDiagnosticDraft, clearDiagnosticDraft, isDiagnosticDraftFresh } from "@/lib/diagnostico/draft";
 import { fiscalMonthFromDiagnosticDraft } from "@/lib/mes/from-diagnostic";
@@ -63,8 +64,15 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ ...wt.text.micro, color: wt.color.textMuted, marginBottom: wt.space[3] }}>{children}</div>;
 }
 
-/** CTA ghost de preview (placeholder — la función llega en fases siguientes). */
-function PreviewCta({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+/** CTA ghost de preview. Con `disabled` se muestra como "Pronto" no accionable (honesto). */
+function PreviewCta({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) {
+  if (disabled) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: wt.space[2], ...wt.text.label, color: wt.color.textMuted, opacity: 0.7 }}>
+        {children} <Badge variant="outline" size="sm">Pronto</Badge>
+      </span>
+    );
+  }
   return (
     <button
       type="button"
@@ -82,7 +90,6 @@ function PreviewCta({ children, onClick }: { children: React.ReactNode; onClick:
 
 export default function MesFiscalPage() {
   const router = useRouter();
-  const noop = () => {};
 
   // El draft del diagnóstico vive en localStorage (cliente) → se lee tras montar para
   // evitar mismatch de hidratación. Sin draft = demo (mock); fresco = diagnóstico; viejo = expirado.
@@ -195,7 +202,9 @@ export default function MesFiscalPage() {
   // Persistencia segura (Fase 5E): origen, si tiene sentido guardar, y resúmenes redactados.
   const snapshotSource: SnapshotSource =
     mode === "xml-preview" ? "xml_preview" : mode === "diagnostico" || mode === "expirado" ? "diagnostic" : "demo";
-  const canSaveMes = mode === "xml-preview" || mode === "diagnostico" || mode === "cfdi-demo";
+  // T8 (R7.1): NO se permite guardar en modo demo/cfdi-demo (CFDIs ficticios) para no
+  // persistir datos de ejemplo como reales. Solo XML/ZIP real (preview) o diagnóstico.
+  const canSaveMes = mode === "xml-preview" || mode === "diagnostico";
   const decisionsForSnapshot: DecisionsSummarySnapshot | undefined = decisionSummary
     ? { confirmed: decisionSummary.confirmed, excluded: decisionSummary.excluded, review: decisionSummary.review }
     : undefined;
@@ -368,7 +377,7 @@ export default function MesFiscalPage() {
             urgency={days <= 7 ? "soon" : "calm"}
             title={mes.nextBestAction.title}
             description={`${mes.nextBestAction.description} · ${mes.nextBestAction.impact} · ${mes.nextBestAction.estimatedTime}`}
-            cta={{ label: mes.nextBestAction.actionLabel, onClick: noop }}
+            cta={{ label: mes.nextBestAction.actionLabel, onClick: () => router.push("/app/cfdis") }}
           />
         </section>
       )}
@@ -436,7 +445,7 @@ export default function MesFiscalPage() {
               impact={p.description}
               status={<StatusChip status="requiereRevision" size="sm" />}
               detail={<span>Impacto: {p.impact}. Wedge lo prepara; tú confirmas y validas en SAT.</span>}
-              primaryAction={{ label: p.actionLabel, onClick: noop }}
+              primaryAction={{ label: p.actionLabel, onClick: () => router.push("/app/cfdis") }}
             />
           ))}
         </div>
@@ -501,7 +510,7 @@ export default function MesFiscalPage() {
               </li>
             ))}
           </ul>
-          <div style={{ marginTop: wt.space[5] }}><PreviewCta onClick={noop}>Ver guía SAT</PreviewCta></div>
+          <div style={{ marginTop: wt.space[5] }}><PreviewCta disabled>Ver guía SAT</PreviewCta></div>
         </Card>
 
         <Card variant="quiet" padding="comfortable">
@@ -524,7 +533,7 @@ export default function MesFiscalPage() {
                   </li>
                 ))}
               </ul>
-              <div style={{ marginTop: wt.space[5] }}><PreviewCta onClick={noop}>Ver evidencia</PreviewCta></div>
+              <div style={{ marginTop: wt.space[5] }}><PreviewCta disabled>Ver evidencia</PreviewCta></div>
             </>
           )}
         </Card>
@@ -546,7 +555,7 @@ export default function MesFiscalPage() {
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop: wt.space[5] }}><PreviewCta onClick={noop}>Ver historial</PreviewCta></div>
+              <div style={{ marginTop: wt.space[5] }}><PreviewCta disabled>Ver historial</PreviewCta></div>
             </>
           ) : (
             <p style={{ ...wt.text.bodySm, color: wt.color.textSecondary, margin: 0 }}>
@@ -588,6 +597,8 @@ export default function MesFiscalPage() {
           />
         </TrustPanel>
       </section>
+
+      <AppMobileNav />
     </AppShell>
   );
 }

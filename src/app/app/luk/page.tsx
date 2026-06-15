@@ -15,6 +15,7 @@ import { Sparkles, ArrowRight, FileText } from "lucide-react";
 import { wt } from "@/design-system/tokens";
 import { AppShell, LogoLockup, Badge, PageHeader, Card, MetricCard, Alert, Button, SecurityNotice } from "@/design-system";
 import { AppSidebarNav } from "@/app/app/_components/AppSidebarNav";
+import { AppMobileNav } from "@/app/app/_components/AppMobileNav";
 import { loadCfdiPreview, loadCfdiDecisions } from "@/lib/cfdi/preview-store";
 import { fiscalMonthFromCfdiPreviewWithDecisions } from "@/lib/cfdi/recompute";
 import { loadDiagnosticDraft } from "@/lib/diagnostico/draft";
@@ -144,6 +145,8 @@ export default function LukPage() {
           <Button variant="ghost" onClick={() => router.push("/app/cfdis")} leftIcon={<FileText size={16} />}>Revisar CFDIs</Button>
         </div>
       </section>
+
+      <AppMobileNav />
     </AppShell>
   );
 }
