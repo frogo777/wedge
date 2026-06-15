@@ -32,7 +32,7 @@ const MOTIVO_OPTIONS: { id: Motivo; label: string }[] = [
 // Rutas de auto-ayuda: cada duda lleva al recurso del flujo nuevo.
 const HELP_ROUTES: { label: string; hint: string; href: string }[] = [
   { label: "No sé qué régimen uso", hint: "El diagnóstico te orienta sin pedir datos sensibles.", href: "/diagnostico" },
-  { label: "Quiero revisar ISR o IVA", hint: "Usa las herramientas o haz tu diagnóstico completo.", href: "/calculadora" },
+  { label: "Quiero revisar ISR o IVA", hint: "Usa las herramientas o haz tu diagnóstico completo.", href: "/diagnostico" },
   { label: "No quiero conectar SAT todavía", hint: "Puedes empezar sin SAT y usar XML/ZIP.", href: "/seguridad" },
   { label: "Tengo dudas de XML/ZIP", hint: "Cómo traer tus CFDIs y qué hace Wedge con ellos.", href: "/seguridad" },
   { label: "No entiendo un pendiente", hint: "luk explica qué revisar y por qué importa.", href: "/luk" },
