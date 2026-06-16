@@ -38,6 +38,8 @@ export interface SaveMesPanelProps {
   decisions?: DecisionsSummarySnapshot;
   luk?: LukSignalSummarySnapshot;
   onDeleted?: () => void;
+  /** Se invoca tras un guardado exitoso (para que el padre limpie estado local, p.ej. el draft). */
+  onSaved?: () => void;
 }
 
 function formatDate(iso: string): string {
@@ -50,7 +52,7 @@ function formatDate(iso: string): string {
 }
 
 export function SaveMesPanel({
-  month, currentMonthLabel, savedView, canSave, source, decisions, luk, onDeleted,
+  month, currentMonthLabel, savedView, canSave, source, decisions, luk, onDeleted, onSaved,
 }: SaveMesPanelProps) {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<SavedState | null>(null);
@@ -101,6 +103,7 @@ export function SaveMesPanel({
       setShowConsent(false);
       setConfirmingUpdate(false);
       await refresh();
+      onSaved?.(); // R7.5: el padre limpia el draft local si lo guardado venía de un diagnóstico.
     } catch {
       setError("No se pudo guardar. Revisa tu conexión.");
     } finally {
@@ -184,7 +187,7 @@ export function SaveMesPanel({
             {canSave && !savedView && !confirmingDelete && (
               confirmingUpdate ? (
                 <>
-                  <span style={{ ...wt.text.bodySm, color: wt.color.text }}>¿Reemplazar el resumen guardado con el actual?</span>
+                  <span style={{ ...wt.text.bodySm, color: wt.color.text }}>Esto reemplazará tu Mes Fiscal guardado con lo que ves ahora. ¿Continuar?</span>
                   <Button variant="primary" size="sm" loading={busy} disabled={busy} onClick={doSave}>Sí, reemplazar</Button>
                   <Button variant="ghost" size="sm" disabled={busy} onClick={() => setConfirmingUpdate(false)}>Cancelar</Button>
                 </>

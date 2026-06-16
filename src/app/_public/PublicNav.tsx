@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { wt } from "@/design-system/tokens";
 import { LogoLockup } from "@/design-system";
+import { createClient } from "@/lib/supabase/client";
 
 const LINKS: { label: string; href: string }[] = [
   { label: "Inicio", href: "/" },
@@ -52,6 +53,22 @@ const ICON_BTN_STYLE: React.CSSProperties = {
 
 export function PublicNav() {
   const [open, setOpen] = useState(false);
+
+  // R7.5: con sesión activa el CTA principal lleva a "Ir a mi Mes Fiscal" (no empuja a diagnóstico
+  // al usuario ya autenticado). getSession() lee la cookie local (sin red); SSR-safe (corre tras montar).
+  const [authed, setAuthed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await createClient().auth.getSession();
+        if (!cancelled) setAuthed(!!data.session);
+      } catch { /* sin red / sin sesión: queda en el CTA público */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const ctaHref = authed ? "/app/mes" : "/diagnostico";
+  const ctaLabel = authed ? "Ir a mi Mes Fiscal" : "Hacer diagnóstico";
 
   // Bloquea el scroll del body mientras el sheet está abierto.
   useEffect(() => {
@@ -109,9 +126,9 @@ export function PublicNav() {
           ))}
         </nav>
 
-        {/* CTA desktop */}
-        <Link href="/diagnostico" className="pn-cta-desktop" style={CTA_STYLE}>
-          Hacer diagnóstico
+        {/* CTA desktop (según sesión) */}
+        <Link href={ctaHref} className="pn-cta-desktop" style={CTA_STYLE}>
+          {ctaLabel}
         </Link>
 
         {/* Hamburguesa mobile */}
@@ -183,11 +200,11 @@ export function PublicNav() {
           </nav>
 
           <Link
-            href="/diagnostico"
+            href={ctaHref}
             onClick={() => setOpen(false)}
             style={{ ...CTA_STYLE, height: 48, justifyContent: "center", marginTop: wt.space[7] }}
           >
-            Hacer diagnóstico
+            {ctaLabel}
           </Link>
         </div>
       )}

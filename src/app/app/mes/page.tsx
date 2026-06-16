@@ -26,8 +26,9 @@ import {
 import { AppSidebarNav } from "@/app/app/_components/AppSidebarNav";
 import { AppMobileNav } from "@/app/app/_components/AppMobileNav";
 import { getMockFiscalMonth, daysToDeadline } from "@/lib/mes/mock";
-import { loadDiagnosticDraft, clearDiagnosticDraft, isDiagnosticDraftFresh } from "@/lib/diagnostico/draft";
+import { loadDiagnosticDraft, clearDiagnosticDraft, isDiagnosticDraftFresh, type DiagnosticDraft } from "@/lib/diagnostico/draft";
 import { fiscalMonthFromDiagnosticDraft } from "@/lib/mes/from-diagnostic";
+import { chooseMesEntryMode } from "@/lib/mes/entry-mode";
 import { fiscalMonthFromCfdis } from "@/lib/mes/from-cfdis";
 import { getDemoCfdis } from "@/lib/cfdi/fixtures";
 import { loadCfdiPreview, loadCfdiDecisions, clearCfdiPreview, clearCfdiDecisions } from "@/lib/cfdi/preview-store";
@@ -104,11 +105,16 @@ export default function MesFiscalPage() {
   // CFDIs + decisiones del preview, para que luk (6A) muestre las MISMAS señales que /app/luk.
   const [previewCfdis, setPreviewCfdis] = useState<RedactedCfdi[]>([]);
   const [previewDecisions, setPreviewDecisions] = useState<Record<string, InboxDecision>>({});
+  // R7.5: si hay snapshot guardado Y un draft de diagnóstico local, el snapshot GANA, pero
+  // dejamos usar el draft de forma EXPLÍCITA (con confirmación) — nunca reemplaza en automático.
+  const [pendingDraft, setPendingDraft] = useState<DiagnosticDraft | null>(null);
+  const [confirmingUseDraft, setConfirmingUseDraft] = useState(false);
 
   useEffect(() => {
-    // Prioridad (client-only, tras montar = hydration-safe):
-    // 1) preview de XML/ZIP + decisiones del Fiscal Inbox (Fase 5D) → recalcular el Mes Fiscal.
-    // 2) diagnóstico guardado. 3) demo (mock).
+    // Prioridad de entrada (R7.5, client-only tras montar = hydration-safe). El snapshot guardado
+    // en DB GANA al draft de diagnóstico local: un draft viejo NUNCA debe tapar tu Mes Fiscal
+    // guardado. Orden: 1) preview XML/ZIP de esta sesión, 2) snapshot DB, 3) draft de diagnóstico
+    // (solo si no hay snapshot), 4) demo.
     const preview = loadCfdiPreview();
     if (preview) {
       const decisions = loadCfdiDecisions();
@@ -124,28 +130,50 @@ export default function MesFiscalPage() {
     // Sin preview vivo: las decisiones quedarían huérfanas (inertes) → limpieza de higiene.
     clearCfdiDecisions();
     const draft = loadDiagnosticDraft();
-    if (draft) {
-      setMes(fiscalMonthFromDiagnosticDraft(draft));
-      setMode(isDiagnosticDraftFresh(draft) ? "diagnostico" : "expirado");
-      return;
-    }
-    // Sin datos locales: intenta cargar el snapshot REDACTADO guardado en la cuenta (Fase 5E).
     let cancelled = false;
     (async () => {
+      // Carga el snapshot REDACTADO guardado en la cuenta (Fase 5E); servidor + RLS son la autoridad.
+      let snapshot: StoredFiscalMonthSnapshot | null = null;
       try {
         const res = await fetch("/api/mes/snapshot", { headers: { Accept: "application/json" } });
-        if (!res.ok || cancelled) return;
-        const data = (await res.json()) as { snapshot: StoredFiscalMonthSnapshot | null };
-        if (cancelled || !data.snapshot) return;
-        setMes(fiscalMonthFromSnapshot(data.snapshot));
+        if (res.ok && !cancelled) {
+          snapshot = ((await res.json()) as { snapshot: StoredFiscalMonthSnapshot | null }).snapshot;
+        }
+      } catch { /* sin sesión / sin red */ }
+      if (cancelled) return;
+      const resolved = chooseMesEntryMode({
+        hasPreview: false,
+        hasSnapshot: !!snapshot,
+        hasDraft: !!draft,
+        draftFresh: draft ? isDiagnosticDraftFresh(draft) : false,
+      });
+      if (resolved === "guardado" && snapshot) {
+        setMes(fiscalMonthFromSnapshot(snapshot));
         setMode("guardado");
-      } catch { /* sin sesión / sin red: se queda en demo */ }
+        // El snapshot gana; si además hay draft local, se puede usar EXPLÍCITAMENTE (con confirmación).
+        if (draft) setPendingDraft(draft);
+      } else if ((resolved === "diagnostico" || resolved === "expirado") && draft) {
+        setMes(fiscalMonthFromDiagnosticDraft(draft));
+        setMode(resolved);
+      }
+      // resolved === "demo": se queda en el estado inicial (mock + modo demo).
     })();
     return () => { cancelled = true; };
   }, []);
 
   const handleNuevoDiagnostico = () => router.push("/diagnostico");
   const handleBorrarDraft = () => { clearDiagnosticDraft(); setMes(getMockFiscalMonth()); setMode("demo"); };
+  // R7.5: usar EXPLÍCITAMENTE el draft de diagnóstico en vez del Mes guardado. NO borra el snapshot;
+  // solo cambia la vista. Reemplazarlo de verdad requiere pulsar "Guardar" (con su confirmación).
+  const adoptPendingDraft = () => {
+    if (!pendingDraft) return;
+    setMes(fiscalMonthFromDiagnosticDraft(pendingDraft));
+    setMode(isDiagnosticDraftFresh(pendingDraft) ? "diagnostico" : "expirado");
+    setPendingDraft(null);
+    setConfirmingUseDraft(false);
+  };
+  // Descartar el draft local (no toca el snapshot guardado) para que el aviso no reaparezca.
+  const discardPendingDraft = () => { clearDiagnosticDraft(); setPendingDraft(null); setConfirmingUseDraft(false); };
   // Demo local del CFDI Engine (Fase 5A): construye el Mes Fiscal desde CFDIs FICTICIOS.
   const handleUsarCfdisFicticios = () => {
     setMes(fiscalMonthFromCfdis(getDemoCfdis(), { period: "2026-06", regime: "resico_pf", now: new Date() }));
@@ -174,6 +202,9 @@ export default function MesFiscalPage() {
   };
   // Tras borrar el snapshot guardado (5E): volvemos a datos de ejemplo.
   const handleSavedDeleted = () => { setMes(getMockFiscalMonth()); setMode("demo"); };
+  // R7.5: al GUARDAR un Mes que viene de un diagnóstico, limpia el draft local para que el aviso
+  // "diagnóstico sin aplicar" no reaparezca (ya quedó persistido como snapshot en la cuenta).
+  const handleSaved = () => { if (mode === "diagnostico" || mode === "expirado") clearDiagnosticDraft(); };
 
   const statusLabel = mode === "diagnostico" ? "Desde tu diagnóstico" : mode === "expirado" ? "Diagnóstico antiguo" : mode === "cfdi-demo" ? "CFDIs ficticios" : mode === "xml-preview" ? "Vista previa XML/ZIP" : mode === "guardado" ? "Guardado en tu cuenta" : "Datos de ejemplo";
   const modeCaption = mode === "diagnostico" ? "desde tu diagnóstico" : mode === "expirado" ? "diagnóstico antiguo" : mode === "cfdi-demo" ? "CFDIs ficticios (demo local)" : mode === "xml-preview" ? "vista previa en este navegador" : mode === "guardado" ? "guardado en tu cuenta" : "datos de ejemplo";
@@ -311,6 +342,28 @@ export default function MesFiscalPage() {
             Cargamos el resumen redactado que guardaste. No guardamos tus XML; vuelve a subirlos si quieres
             recalcular al detalle. Puedes borrar este avance cuando quieras. Wedge prepara; tú validas en SAT.
           </Alert>
+          {/* R7.5: hay un diagnóstico local SIN aplicar. Tu Mes guardado sigue intacto; usar el
+              diagnóstico es una decisión EXPLÍCITA con confirmación (nunca reemplaza en automático). */}
+          {pendingDraft && (
+            <div style={{ marginTop: wt.space[4] }}>
+              {confirmingUseDraft ? (
+                <Alert variant="warning" title="Ya tienes un Mes Fiscal guardado">
+                  Si usas este diagnóstico, reemplazará tu avance guardado cuando lo guardes. Tu Mes
+                  Fiscal actual no se toca hasta que tú guardes.
+                  <div style={{ display: "flex", gap: wt.space[5], flexWrap: "wrap", alignItems: "center", marginTop: wt.space[4] }}>
+                    <PreviewCta onClick={adoptPendingDraft}>Reemplazar con este diagnóstico</PreviewCta>
+                    <PreviewCta onClick={() => setConfirmingUseDraft(false)}>Cancelar y volver a mi Mes Fiscal</PreviewCta>
+                  </div>
+                </Alert>
+              ) : (
+                <div style={{ display: "flex", gap: wt.space[5], flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={{ ...wt.text.bodySm, color: wt.color.textSecondary }}>Tienes un diagnóstico reciente sin aplicar.</span>
+                  <PreviewCta onClick={() => setConfirmingUseDraft(true)}>Usar este diagnóstico</PreviewCta>
+                  <PreviewCta onClick={discardPendingDraft}>Descartar diagnóstico local</PreviewCta>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -578,6 +631,7 @@ export default function MesFiscalPage() {
           decisions={decisionsForSnapshot}
           luk={lukSummaryForSnapshot}
           onDeleted={handleSavedDeleted}
+          onSaved={handleSaved}
         />
       </section>
 
