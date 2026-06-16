@@ -327,9 +327,10 @@ export default function MesFiscalPage() {
                 Estos cambios viven en este navegador y no se guardan permanentemente. Wedge prepara; tú validas en SAT.
               </Alert>
             ) : (
-              <Alert variant="trust" title="Tu Mes Fiscal se creó con XML/ZIP cargados en este navegador">
-                Procesamos los CFDIs que subiste en este navegador para esta vista previa. No se conecta al SAT
-                y no se guarda permanentemente en esta fase. Wedge prepara; tú validas en SAT.
+              <Alert variant="trust" title="Vista previa local (XML/ZIP)">
+                <strong style={{ color: wt.color.text }}>Esta vista previa vive en este navegador. No reemplaza lo
+                guardado hasta que pulses Guardar.</strong>{" "} Procesamos los CFDIs que subiste aquí; no se conecta
+                al SAT ni se sube nada. Wedge prepara; tú validas en SAT.
               </Alert>
             )}
             <div style={{ display: "flex", gap: wt.space[5], flexWrap: "wrap", alignItems: "center", marginTop: wt.space[4] }}>
@@ -343,7 +344,8 @@ export default function MesFiscalPage() {
       {/* Banner: el Mes Fiscal se cargó desde el snapshot REDACTADO guardado en la cuenta (5E) */}
       {mode === "guardado" && (
         <div style={{ marginBottom: wt.space[6] }}>
-          <Alert variant="trust" title="Este Mes Fiscal está guardado en tu cuenta">
+          <Alert variant="trust" title="Guardado en tu cuenta">
+            <strong style={{ color: wt.color.text }}>Puedes cerrar sesión y volver sin perderlo.</strong>{" "}
             Cargamos el resumen redactado que guardaste. No guardamos tus XML; vuelve a subirlos si quieres
             recalcular al detalle. Puedes borrar este avance cuando quieras. Wedge prepara; tú validas en SAT.
           </Alert>
@@ -423,6 +425,10 @@ export default function MesFiscalPage() {
         <MonthProgress month={mes.monthLabel} percent={mes.progress} ready={readyCount} pending={pendientes.length} next={mes.nextBestAction ? 1 : 0} />
         <p style={{ ...wt.text.body, color: wt.color.textSecondary, margin: 0 }}>
           {mes.progress}% listo · <strong style={{ color: wt.color.text }}>Faltan {pendientes.length} acciones</strong> antes del día 17.
+        </p>
+        <p style={{ ...wt.text.caption, color: wt.color.textMuted, margin: 0 }}>
+          El progreso sube cuando confirmas ingresos, revisas gastos y resuelves los pendientes del mes. Es una
+          guía informativa, no un trámite ante el SAT.
         </p>
       </section>
 
@@ -554,7 +560,7 @@ export default function MesFiscalPage() {
           )}
 
           <p style={{ ...wt.text.caption, color: wt.color.textMuted, margin: `${wt.space[4]}px 0 0` }}>
-            luk no presenta declaraciones. Te ayuda a saber qué revisar.
+            luk no presenta declaraciones. Te ayuda a saber qué revisar; si algo no te cuadra, consúltalo con un contador.
           </p>
         </Card>
       </section>
@@ -565,6 +571,7 @@ export default function MesFiscalPage() {
           <div style={{ display: "flex", alignItems: "center", gap: wt.space[3], marginBottom: wt.space[4] }}>
             <span style={{ display: "inline-flex", color: wt.color.trustBlueGray }}><ClipboardCheck size={18} /></span>
             <h2 style={{ ...wt.text.h3, color: wt.color.text, margin: 0 }}>Guía SAT</h2>
+            <Badge variant="outline" size="sm">Próximamente</Badge>
           </div>
           <p style={{ ...wt.text.bodySm, color: wt.color.textSecondary, margin: `0 0 ${wt.space[4]}px` }}>
             Antes de entrar al SAT, revisa estos puntos:
@@ -583,6 +590,7 @@ export default function MesFiscalPage() {
           <div style={{ display: "flex", alignItems: "center", gap: wt.space[3], marginBottom: wt.space[4] }}>
             <span style={{ display: "inline-flex", color: wt.color.trustBlueGray }}><FolderArchive size={18} /></span>
             <h2 style={{ ...wt.text.h3, color: wt.color.text, margin: 0 }}>Evidencia del mes</h2>
+            <Badge variant="outline" size="sm">Próximamente</Badge>
           </div>
           {mode === "guardado" ? (
             // En "guardado" NO persistimos XML — ser honestos en vez de mostrar "XML · parcial".

@@ -7,7 +7,8 @@
  */
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ArrowRight } from "lucide-react";
 import { wt } from "@/design-system/tokens";
 import { Badge } from "@/design-system";
 import type { LukSignal } from "@/lib/luk/types";
@@ -28,7 +29,18 @@ const SOURCE_LABEL: Record<LukSignal["source"], string> = {
   user_decision: "Tu decisión",
 };
 
-export function SignalExplainCard({ signal, explanation }: { signal: LukSignal; explanation: LukExplanation }) {
+export function SignalExplainCard({
+  signal,
+  explanation,
+  actionHref,
+  actionLabel,
+}: {
+  signal: LukSignal;
+  explanation: LukExplanation;
+  /** R8.1: cada señal cierra con una acción real (p.ej. "Revisar CFDIs" → /app/cfdis). */
+  actionHref?: string;
+  actionLabel?: string;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -65,6 +77,14 @@ export function SignalExplainCard({ signal, explanation }: { signal: LukSignal; 
           <Field k="Qué falta" v={explanation.whatWedgeDoesNotKnow} />
           <Field k="Siguiente acción" v={explanation.nextAction} />
           <p style={{ ...wt.text.caption, color: wt.color.textMuted, margin: 0 }}>{explanation.userSafeDisclaimer}</p>
+          {actionHref && actionLabel && (
+            <Link
+              href={actionHref}
+              style={{ display: "inline-flex", alignItems: "center", gap: wt.space[2], ...wt.text.label, color: wt.color.orangeInk, textDecoration: "none" }}
+            >
+              {actionLabel} <ArrowRight size={14} />
+            </Link>
+          )}
         </div>
       )}
     </div>

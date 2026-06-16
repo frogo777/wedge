@@ -82,6 +82,11 @@ export default function LukPage() {
 
   const groups = ctx ? groupLukSignals(signals) : emptyGroups();
   const hasSignals = signals.length > 0;
+  // R8.1: cada señal cierra con una acción real. En preview de CFDIs → revisar el Inbox (ahí se
+  // confirma/excluye); con snapshot/diagnóstico (sin CFDIs vivos) → volver al Mes Fiscal.
+  const signalAction = ctx === "xml-preview"
+    ? { href: "/app/cfdis", label: "Revisar CFDIs" }
+    : { href: "/app/mes", label: "Volver al Mes Fiscal" };
   const explById: Record<string, LukExplanation> = {};
   for (const e of buildLukExplanations(signals)) explById[e.signalId] = e;
 
@@ -153,7 +158,13 @@ export default function LukPage() {
           {/* Lista de señales con explain cards (progressive disclosure) */}
           <section style={{ display: "grid", gap: wt.space[4], marginBottom: wt.space[8] }}>
             {signals.map((s) => (
-              <SignalExplainCard key={s.id} signal={s} explanation={explById[s.id] ?? buildLukExplanation(s)} />
+              <SignalExplainCard
+                key={s.id}
+                signal={s}
+                explanation={explById[s.id] ?? buildLukExplanation(s)}
+                actionHref={signalAction.href}
+                actionLabel={signalAction.label}
+              />
             ))}
           </section>
         </>

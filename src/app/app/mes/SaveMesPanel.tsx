@@ -67,7 +67,7 @@ export function SaveMesPanel({
 
   useEffect(() => {
     if (!justSaved) return;
-    const t = setTimeout(() => setJustSaved(false), 4000);
+    const t = setTimeout(() => setJustSaved(false), 6000); // R8.1: no desaparece demasiado rápido
     return () => clearTimeout(t);
   }, [justSaved]);
 
@@ -234,8 +234,8 @@ export function SaveMesPanel({
         <p style={{ ...wt.text.caption, color: wt.color.warning, margin: `${wt.space[4]}px 0 0` }}>{error}</p>
       )}
       {justSaved && !error && (
-        <p style={{ ...wt.text.caption, color: wt.color.trustBlueGray, margin: `${wt.space[4]}px 0 0`, display: "flex", alignItems: "center", gap: 6 }}>
-          <Check size={14} strokeWidth={2.5} /> Guardado en tu cuenta.
+        <p style={{ ...wt.text.bodySm, color: wt.color.trustBlueGray, margin: `${wt.space[4]}px 0 0`, display: "flex", alignItems: "center", gap: 6 }}>
+          <Check size={15} strokeWidth={2.5} /> <span><strong>Mes Fiscal guardado en tu cuenta.</strong> Puedes cerrar sesión y volver más tarde.</span>
         </p>
       )}
     </Card>

@@ -90,9 +90,14 @@ export function CfdiInboxItem({
           </div>
           {decision && (
             <p style={{ ...wt.text.caption, color: wt.color.textMuted, margin: `${wt.space[3]}px 0 0` }}>
+              {decision === "excluido"
+                ? "Excluido — baja el estimado de tu Mes Fiscal."
+                : decision === "confirmado"
+                ? "Confirmado — ordena tu Inbox; no cambia el estimado (ya contaba como ingreso)."
+                : "Marcado por revisar — no cambia el estimado hasta que lo confirmes o excluyas."}
               {synced
-                ? "Cambio temporal en esta sesión — se refleja en tu Mes Fiscal (no se guarda permanentemente ni modifica el SAT)."
-                : "Cambio local de la demo en esta sesión — no modifica tu Mes Fiscal."}
+                ? " Vive en esta sesión; no se guarda solo ni modifica el SAT."
+                : " Cambio local de la demo; no toca tu Mes Fiscal."}
             </p>
           )}
         </>
