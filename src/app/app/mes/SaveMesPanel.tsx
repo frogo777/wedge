@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Save, Trash2, ShieldCheck } from "lucide-react";
+import { Save, Trash2, ShieldCheck, Check } from "lucide-react";
 import { wt } from "@/design-system/tokens";
 import { Card, Button, ConsentPanel, Badge } from "@/design-system";
 import type { FiscalMonth } from "@/lib/mes/types";
@@ -61,6 +61,15 @@ export function SaveMesPanel({
   const [confirmingUpdate, setConfirmingUpdate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // R8: confirmacion efimera tras guardar (el badge ya estaba visible si habia snapshot previo, asi que
+  // sin esto "Actualizar lo guardado" no daba ninguna señal de exito).
+  const [justSaved, setJustSaved] = useState(false);
+
+  useEffect(() => {
+    if (!justSaved) return;
+    const t = setTimeout(() => setJustSaved(false), 4000);
+    return () => clearTimeout(t);
+  }, [justSaved]);
 
   async function refresh() {
     try {
@@ -103,6 +112,7 @@ export function SaveMesPanel({
       setShowConsent(false);
       setConfirmingUpdate(false);
       await refresh();
+      setJustSaved(true); // R8: confirmacion visible de exito
       onSaved?.(); // R7.5: el padre limpia el draft local si lo guardado venía de un diagnóstico.
     } catch {
       setError("No se pudo guardar. Revisa tu conexión.");
@@ -222,6 +232,11 @@ export function SaveMesPanel({
 
       {error && (
         <p style={{ ...wt.text.caption, color: wt.color.warning, margin: `${wt.space[4]}px 0 0` }}>{error}</p>
+      )}
+      {justSaved && !error && (
+        <p style={{ ...wt.text.caption, color: wt.color.trustBlueGray, margin: `${wt.space[4]}px 0 0`, display: "flex", alignItems: "center", gap: 6 }}>
+          <Check size={14} strokeWidth={2.5} /> Guardado en tu cuenta.
+        </p>
       )}
     </Card>
   );

@@ -104,6 +104,8 @@ export default function FiscalInboxPage() {
   };
 
   const sum = inboxSummary(items, decisions);
+  // R8: CFDIs en otra moneda cuentan en el CONTEO pero no en el MONTO (falta tipo de cambio) → se explica.
+  const nonMxnCount = items.filter((c) => c.currency && c.currency !== "MXN").length;
   const decisionCounts = summarizeCfdiDecisions(items, decisions);
   const visible = filterItems(items, decisions, filter);
   const hasData = source !== null && items.length > 0;
@@ -129,7 +131,7 @@ export default function FiscalInboxPage() {
   );
   const lukPrimary = getPrimaryLukSignal(lukSignals);
   const lukPrimaryExpl = lukPrimary ? buildLukExplanation(lukPrimary) : null;
-  const sourceBadge = source === "demo" ? "Datos ficticios" : source === "upload" ? "Vista previa XML/ZIP" : "";
+  const sourceBadge = source === "demo" ? "Datos ficticios" : source === "upload" ? "Vista previa local" : "";
 
   return (
     <AppShell
@@ -196,11 +198,16 @@ export default function FiscalInboxPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: wt.space[4] }}>
               <MetricCard label="CFDIs detectados" value={String(sum.total)} helper={`${sum.confirmados} confirmados`} status={<StatusChip status="detectado" size="sm" />} />
               <MetricCard label="Requieren revisión" value={String(sum.requierenRevision)} helper="por resolver" status={<StatusChip status="requiereRevision" size="sm" />} />
-              <MetricCard label="Ingresos detectados" value={liveMonth ? MXN(liveMonth.incomeDetected) : "—"} helper="estimado informativo" status={<StatusChip status="estimado" size="sm" />} />
+              <MetricCard label="Ingresos cobrados" value={liveMonth ? MXN(liveMonth.incomeDetected) : "—"} helper="cobrado en MXN · estimado" status={<StatusChip status="estimado" size="sm" />} />
               <MetricCard label="Retenciones" value={liveMonth ? MXN(liveMonth.retentions) : "—"} helper="pago a cuenta · por revisar" status={<StatusChip status="estimado" size="sm" />} />
               <MetricCard label="Cancelados" value={String(sum.cancelados)} helper="no cuentan" status={<StatusChip status="excluido" size="sm" />} />
               <MetricCard label="Pendientes de complemento" value={String(sum.pendientesComplemento)} helper="PPD sin REP" status={<StatusChip status="requiereRevision" size="sm" />} />
             </div>
+            {nonMxnCount > 0 && (
+              <p style={{ ...wt.text.caption, color: wt.color.textMuted, margin: `${wt.space[3]}px 0 0` }}>
+                {nonMxnCount} {nonMxnCount === 1 ? "comprobante" : "comprobantes"} en otra moneda (p. ej. USD) cuentan en el total de CFDIs pero no en el monto cobrado: falta el tipo de cambio.
+              </p>
+            )}
           </section>
 
           {/* luk contextual (6A): señal principal sobre estos CFDIs */}
@@ -297,7 +304,7 @@ export default function FiscalInboxPage() {
           <section style={{ marginBottom: wt.space[8] }}>
             <TrustPanel
               title="Vista previa local"
-              description="Los CFDIs cargados en esta fase no se guardan permanentemente."
+              description="Tus XML se procesan en este navegador y no se guardan; puedes guardar solo el resumen de tu Mes Fiscal en tu cuenta."
               icon={<FileText size={20} />}
               footnote={<SecurityNotice>Se procesan en este navegador; no se suben ni se guardan. Puedes borrar esta vista previa.</SecurityNotice>}
             >

@@ -51,7 +51,7 @@ export function isDecidable(cfdi: RedactedCfdi): boolean {
 /** Título humano seguro (sin RFC/UUID). */
 export function cfdiTitle(c: RedactedCfdi): string {
   if (c.status === "cancelado") return "CFDI cancelado";
-  if (c.status === "pendienteComplemento") return "Ingreso a plazos (PPD) por confirmar";
+  if (c.status === "pendienteComplemento") return "Ingreso a plazos (PPD) — pendiente de complemento";
   if (c.type === "pago") return "Complemento de pago (REP)";
   if (c.type === "egreso") return "Nota de crédito (egreso)";
   if (c.type === "nomina") return "Recibo de nómina";

@@ -20,13 +20,32 @@ export const viewport: Viewport = {
   themeColor: "#0C1017",
 };
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://wedge-os.vercel.app";
+const DESCRIPTION =
+  "Prepara tu mes fiscal para freelancers MX: calcula y ordena tu ISR/IVA y CFDIs. Tú validas y presentas en el SAT.";
+
 export const metadata: Metadata = {
+  // metadataBase: resuelve OG/canonical absolutos (sin esto, og:image/canonical salen como localhost en build).
+  metadataBase: new URL(SITE_URL),
   title: { default: "wedge — Tu mes fiscal claro", template: "%s" },
-  description:
-    "Copiloto fiscal mensual para freelancers MX: calcula, ordena y prepara tu ISR/IVA y CFDIs. Tú validas y presentas en el SAT.",
+  description: DESCRIPTION,
   applicationName: "wedge",
   robots: { index: true, follow: true },
-  icons: { icon: "/favicon.ico" },
+  // El favicon lo sirve `src/app/icon.svg` (App Router) y la tarjeta social `src/app/opengraph-image.tsx`;
+  // Next inyecta ambos automaticamente, asi que no hace falta declararlos aqui (antes apuntaba a un
+  // /favicon.ico inexistente → 404).
+  openGraph: {
+    type: "website",
+    siteName: "wedge",
+    locale: "es_MX",
+    title: "wedge — Tu mes fiscal claro",
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "wedge — Tu mes fiscal claro",
+    description: DESCRIPTION,
+  },
   formatDetection: { telephone: false },
 };
 

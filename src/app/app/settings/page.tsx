@@ -63,7 +63,7 @@ export default function SettingsPage() {
         <div style={{ maxWidth: 760, margin: "0 auto", padding: `${wt.space[4]}px ${wt.space[6]}px`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: wt.space[4], flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: wt.space[4], minWidth: 0 }}>
             <span className="settings-topbar-logo" style={{ display: "none" }}><LogoLockup variant="iconOnly" tone="dark" size="sm" /></span>
-            <span style={{ ...wt.text.label, color: wt.color.text }}>Settings</span>
+            <span style={{ ...wt.text.label, color: wt.color.text }}>Ajustes</span>
           </div>
           <span style={{ ...wt.text.caption, color: wt.color.textMuted }}>tu cuenta</span>
         </div>
@@ -79,7 +79,7 @@ export default function SettingsPage() {
 
       <PageHeader
         overline="Tu cuenta"
-        title="Settings"
+        title="Ajustes"
         description="Tu cuenta y tu sesión. Wedge prepara; tú validas y presentas en SAT."
         back={{ label: "Volver al Mes Fiscal", href: "/app/mes" }}
       />
@@ -119,7 +119,8 @@ export default function SettingsPage() {
       </Card>
 
       <section style={{ marginBottom: wt.space[8], display: "flex", flexDirection: "column", gap: wt.space[5] }}>
-        <SecurityNotice>Más opciones de cuenta llegarán pronto. Wedge no declara, no paga ni modifica información en SAT.</SecurityNotice>
+        <p style={{ ...wt.text.caption, color: wt.color.textMuted, margin: 0 }}>Más opciones de cuenta llegarán pronto.</p>
+        <SecurityNotice>Wedge no declara, no paga ni modifica información en SAT.</SecurityNotice>
         <div>
           <Button variant="ghost" onClick={() => router.push("/app/mes")} leftIcon={<ArrowRight size={16} />}>Volver al Mes Fiscal</Button>
         </div>

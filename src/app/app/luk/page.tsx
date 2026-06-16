@@ -20,12 +20,13 @@ import { loadCfdiPreview, loadCfdiDecisions } from "@/lib/cfdi/preview-store";
 import { fiscalMonthFromCfdiPreviewWithDecisions } from "@/lib/cfdi/recompute";
 import { loadDiagnosticDraft } from "@/lib/diagnostico/draft";
 import { fiscalMonthFromDiagnosticDraft } from "@/lib/mes/from-diagnostic";
+import { fiscalMonthFromSnapshot, type StoredFiscalMonthSnapshot } from "@/lib/mes/persistence";
 import { buildLukSignals, groupLukSignals } from "@/lib/luk/signals";
 import { buildLukExplanation, buildLukExplanations, type LukExplanation } from "@/lib/luk/explanations";
 import type { LukSignal, LukSignalGroups } from "@/lib/luk/types";
 import { SignalExplainCard } from "./SignalExplainCard";
 
-type Ctx = "xml-preview" | "diagnostico" | null;
+type Ctx = "xml-preview" | "guardado" | "diagnostico" | null;
 
 function emptyGroups(): LukSignalGroups {
   return { blocker: [], warning: [], review: [], info: [] };
@@ -39,7 +40,8 @@ export default function LukPage() {
   const [monthLabel, setMonthLabel] = useState("");
 
   useEffect(() => {
-    // client-only tras montar (hydration-safe): mismo contexto que /app/mes.
+    // client-only tras montar (hydration-safe): MISMA prioridad que /app/mes (R7.5/R8):
+    // preview de esta sesión → snapshot guardado (DB) → diagnóstico local → sin contexto.
     const preview = loadCfdiPreview();
     if (preview) {
       const decisions = loadCfdiDecisions();
@@ -51,12 +53,31 @@ export default function LukPage() {
       return;
     }
     const draft = loadDiagnosticDraft();
-    if (draft) {
-      const month = fiscalMonthFromDiagnosticDraft(draft);
-      setSignals(buildLukSignals({ month, now: new Date() }));
-      setMonthLabel(month.monthLabel);
-      setCtx("diagnostico");
-    }
+    let cancelled = false;
+    (async () => {
+      // R8: el snapshot guardado (DB) GANA al draft → luk deja de decir "no tengo contexto" cuando
+      // /app/mes ya muestra un Mes guardado (antes luk solo miraba preview/draft).
+      let snapshot: StoredFiscalMonthSnapshot | null = null;
+      try {
+        const res = await fetch("/api/mes/snapshot", { headers: { Accept: "application/json" } });
+        if (res.ok && !cancelled) snapshot = ((await res.json()) as { snapshot: StoredFiscalMonthSnapshot | null }).snapshot;
+      } catch { /* sin sesión / sin red */ }
+      if (cancelled) return;
+      if (snapshot) {
+        const month = fiscalMonthFromSnapshot(snapshot);
+        setSignals(buildLukSignals({ month, now: new Date() }));
+        setMonthLabel(month.monthLabel);
+        setCtx("guardado");
+        return;
+      }
+      if (draft) {
+        const month = fiscalMonthFromDiagnosticDraft(draft);
+        setSignals(buildLukSignals({ month, now: new Date() }));
+        setMonthLabel(month.monthLabel);
+        setCtx("diagnostico");
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const groups = ctx ? groupLukSignals(signals) : emptyGroups();
@@ -113,7 +134,8 @@ export default function LukPage() {
         </Card>
       ) : !hasSignals ? (
         <Alert variant="info" title="Sin señales conocidas por ahora">
-          luk no detectó señales conocidas en este momento. Esto no sustituye tu revisión: es un estimado informativo y tú validas en SAT.
+          luk no detectó señales conocidas en este momento. Revisa tus CFDIs o tu Mes Fiscal; si algo no te
+          cuadra, consúltalo con un contador. Es un estimado informativo y tú validas en SAT.
         </Alert>
       ) : (
         <>

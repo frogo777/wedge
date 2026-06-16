@@ -206,11 +206,16 @@ export default function MesFiscalPage() {
   // "diagnóstico sin aplicar" no reaparezca (ya quedó persistido como snapshot en la cuenta).
   const handleSaved = () => { if (mode === "diagnostico" || mode === "expirado") clearDiagnosticDraft(); };
 
-  const statusLabel = mode === "diagnostico" ? "Desde tu diagnóstico" : mode === "expirado" ? "Diagnóstico antiguo" : mode === "cfdi-demo" ? "CFDIs ficticios" : mode === "xml-preview" ? "Vista previa XML/ZIP" : mode === "guardado" ? "Guardado en tu cuenta" : "Datos de ejemplo";
-  const modeCaption = mode === "diagnostico" ? "desde tu diagnóstico" : mode === "expirado" ? "diagnóstico antiguo" : mode === "cfdi-demo" ? "CFDIs ficticios (demo local)" : mode === "xml-preview" ? "vista previa en este navegador" : mode === "guardado" ? "guardado en tu cuenta" : "datos de ejemplo";
+  // R8: etiquetas que distinguen claramente persistido (DB) de volátil (navegador) — no deben parecer equivalentes.
+  const statusLabel = mode === "diagnostico" ? "Diagnóstico local sin guardar" : mode === "expirado" ? "Diagnóstico antiguo (sin guardar)" : mode === "cfdi-demo" ? "CFDIs ficticios" : mode === "xml-preview" ? "Vista previa local" : mode === "guardado" ? "Guardado en tu cuenta" : "Datos de ejemplo";
+  const modeCaption = mode === "diagnostico" ? "diagnóstico local · sin guardar" : mode === "expirado" ? "diagnóstico antiguo · sin guardar" : mode === "cfdi-demo" ? "CFDIs ficticios (demo local)" : mode === "xml-preview" ? "vista previa local · no se guarda" : mode === "guardado" ? "guardado en tu cuenta" : "datos de ejemplo";
 
   const days = daysToDeadline(mes.deadline, new Date());
   const pendientes = mes.pendingActions.filter((p) => p.status !== "done");
+  // R8: lo que el MONTO del mes (cobrado en MXN) NO incluye, para explicarlo y evitar sensación de
+  // "ingresos faltantes" (el ICP voiceover cobra en USD; el PPD cuenta al llegar su complemento).
+  const nonMxnCount = previewCfdis.filter((c) => c.currency && c.currency !== "MXN").length;
+  const ppdCount = previewCfdis.filter((c) => c.paymentMethod === "PPD").length;
   const cfdiItems = mes.pendingActions.filter((p) => p.type === "revisar_cfdi" || p.type === "revisar_iva" || p.type === "validar_retencion");
   // Pasos "listos" reales = los pasos en estado "done" del checklist de cada modo (honesto,
   // no inflar el avance): demo muestra 2 done; diagnóstico/expirado/cfdi-demo/xml-preview muestran 1.
@@ -261,7 +266,7 @@ export default function MesFiscalPage() {
           <div style={{ display: "flex", alignItems: "center", gap: wt.space[4], minWidth: 0 }}>
             <span className="mes-topbar-logo" style={{ display: "none" }}><LogoLockup variant="iconOnly" tone="dark" size="sm" /></span>
             <span style={{ ...wt.text.label, color: wt.color.text }}>Mes Fiscal · {mes.monthLabel}</span>
-            <Badge variant={mode === "demo" ? "neutral" : mode === "expirado" ? "warning" : "info"}>{statusLabel}</Badge>
+            <Badge variant={mode === "guardado" ? "info" : mode === "expirado" ? "warning" : mode === "demo" ? "neutral" : "outline"}>{statusLabel}</Badge>
           </div>
           <span style={{ ...wt.text.caption, color: wt.color.textMuted }}>{mes.regimeLabel} · {modeCaption}</span>
         </div>
@@ -442,10 +447,17 @@ export default function MesFiscalPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: wt.space[4] }}>
           <MetricCard label="ISR estimado" value={MXN(mes.isrEstimate)} helper="RESICO PF · Art. 113-E" status={<StatusChip status="estimado" size="sm" />} />
           <MetricCard label="IVA estimado" value={MXN(mes.ivaEstimate)} helper="por revisar" status={<StatusChip status="requiereRevision" size="sm" />} />
-          <MetricCard label="Ingresos detectados" value={MXN(mes.incomeDetected)} helper={`${MXN(mes.incomeConfirmed)} confirmados`} status={<StatusChip status={mes.incomeConfirmed > 0 ? "confirmado" : "detectado"} size="sm" />} />
+          <MetricCard label="Ingresos detectados" value={MXN(mes.incomeDetected)} helper={mes.incomeConfirmed > 0 ? `${MXN(mes.incomeConfirmed)} confirmados por ti` : "cobrado · aún sin confirmar por ti"} status={<StatusChip status={mes.incomeConfirmed > 0 ? "confirmado" : "detectado"} size="sm" />} />
           <MetricCard label="Retenciones" value={MXN(mes.retentions)} helper="pago a cuenta · por revisar" status={<StatusChip status="estimado" size="sm" />} />
           <MetricCard label="Pendientes" value={String(pendientes.length)} helper="acciones por resolver" status={<StatusChip status="requiereRevision" size="sm" />} />
         </div>
+        {(nonMxnCount > 0 || ppdCount > 0) && (
+          <p style={{ ...wt.text.caption, color: wt.color.textMuted, margin: `${wt.space[3]}px 0 0` }}>
+            El monto del mes es lo cobrado en MXN.
+            {nonMxnCount > 0 ? ` No incluye ${nonMxnCount} CFDI${nonMxnCount > 1 ? "s" : ""} en otra moneda (falta tipo de cambio).` : ""}
+            {ppdCount > 0 ? " Los pagos en parcialidades (PPD) suman cuando llega su complemento." : ""}
+          </p>
+        )}
       </section>
 
       {/* 5. Checklist del Mes Fiscal */}
@@ -515,7 +527,7 @@ export default function MesFiscalPage() {
             <h2 style={{ ...wt.text.h3, color: wt.color.text, margin: 0 }}>
               {lukSignals.length > 0
                 ? `luk detectó ${lukSignals.length} ${lukSignals.length === 1 ? "señal" : "señales"} este mes`
-                : "luk necesita un diagnóstico o XML/ZIP para detectar señales"}
+                : "luk aún no tiene señales"}
             </h2>
           </div>
 
@@ -595,7 +607,10 @@ export default function MesFiscalPage() {
 
       {/* 10. History preview */}
       <section style={{ marginBottom: wt.space[9] }}>
-        <SectionLabel>Historial</SectionLabel>
+        <div style={{ display: "flex", alignItems: "baseline", gap: wt.space[3] }}>
+          <SectionLabel>Historial</SectionLabel>
+          {mode === "demo" && <Badge variant="outline" size="sm">Ejemplo</Badge>}
+        </div>
         <Card variant="quiet" padding="comfortable">
           {mes.historyPreview.length > 0 ? (
             <>

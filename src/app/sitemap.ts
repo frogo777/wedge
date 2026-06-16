@@ -14,8 +14,7 @@ const ROUTES = [
   "/privacidad",
   "/terminos",
   "/legal/uso-credenciales-sat",
-  "/login",
-  "/signup",
+  // /login y /signup NO van en el sitemap: robots.ts los bloquea (evita "enviada pero bloqueada").
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

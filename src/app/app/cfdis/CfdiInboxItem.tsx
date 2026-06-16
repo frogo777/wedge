@@ -45,6 +45,8 @@ export function CfdiInboxItem({
   const eff = effectiveStatus(cfdi, decision);
   const chip = cfdiStatusChip(eff);
   const decidable = isDecidable(cfdi);
+  // R8: el monto se formatea con "$"; si la moneda no es MXN, mostrarlo para no confundir USD con pesos.
+  const cur = cfdi.currency && cfdi.currency !== "MXN" ? ` ${cfdi.currency}` : "";
 
   return (
     <div style={{ background: wt.color.surface, border: `1px solid ${wt.color.border}`, borderRadius: wt.radius.lg, padding: `${wt.space[5]}px ${wt.space[6]}px` }}>
@@ -52,7 +54,7 @@ export function CfdiInboxItem({
         <div style={{ display: "flex", flexDirection: "column", gap: wt.space[2], flex: 1, minWidth: 200 }}>
           <span style={{ ...wt.text.h3, color: wt.color.text }}>{cfdiTitle(cfdi)}</span>
           <span style={{ ...wt.text.caption, fontFamily: wt.font.mono, color: wt.color.textMuted, fontVariantNumeric: "tabular-nums" }}>
-            {monthLabel(cfdi.monthKey)} · {MXN(cfdi.total)}
+            {monthLabel(cfdi.monthKey)} · {MXN(cfdi.total)}{cur}
           </span>
           <span style={{ ...wt.text.bodySm, color: wt.color.textSecondary }}>{cfdiImpact(cfdi)}</span>
         </div>
@@ -113,7 +115,7 @@ export function CfdiInboxItem({
 
       {expanded && (
         <div style={{ marginTop: wt.space[4], paddingTop: wt.space[4], borderTop: `1px solid ${wt.color.border}`, ...wt.text.bodySm, color: wt.color.textSecondary, display: "grid", gap: wt.space[2] }}>
-          <span style={{ fontFamily: wt.font.mono }}>Subtotal {MXN(cfdi.subtotal)} · IVA trasladado {MXN(cfdi.taxes.ivaTrasladado)}</span>
+          <span style={{ fontFamily: wt.font.mono }}>Subtotal {MXN(cfdi.subtotal)}{cur} · IVA trasladado {MXN(cfdi.taxes.ivaTrasladado)}{cur}</span>
           {(cfdi.taxes.isrRetenido > 0 || cfdi.taxes.ivaRetenido > 0) && (
             <span style={{ fontFamily: wt.font.mono }}>Retenciones: ISR {MXN(cfdi.taxes.isrRetenido)} · IVA {MXN(cfdi.taxes.ivaRetenido)}</span>
           )}

@@ -20,7 +20,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { wt } from "@/design-system/tokens";
-import { Button, Card, LogoLockup, TrustPanel, PermissionList, SecurityNotice } from "@/design-system";
+import { Button, Card, LogoLockup, TrustPanel, PermissionList, SecurityNotice, Badge } from "@/design-system";
 import { Eye, EyeOff, ArrowRight, CheckCircle } from "lucide-react";
 import { funnel } from "@/lib/analytics/events";
 
@@ -68,51 +68,27 @@ function GoogleG() {
   );
 }
 
-/** Google OAuth — lógica intacta (redirectTo → /auth/callback?next=/onboarding). */
-function SignupGoogleButton() {
-  const supabase = createClient();
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-
-  const handle = async () => {
-    setErr("");
-    setLoading(true);
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${origin}/auth/callback?next=%2Fonboarding` },
-    });
-    if (error) {
-      setErr("No pudimos abrir Google. Intenta de nuevo.");
-      setLoading(false);
-    }
-  };
-
+/**
+ * R8: Google se muestra DESHABILITADO con badge "Pronto" (igual que /login). Google OAuth está
+ * diferido en modo sin costo; antes este botón llamaba a signInWithOAuth y, sin Google configurado,
+ * llevaba a un error. Honesto y consistente con login. (Se reactiva cuando se configure Google.)
+ */
+function DisabledMethod({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <>
-      <button
-        type="button"
-        onClick={handle}
-        disabled={loading}
-        style={{
-          width: "100%", height: 46, padding: "0 16px",
-          background: wt.color.surface,
-          border: `1px solid ${wt.color.border}`,
-          borderRadius: wt.radius.md,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          fontSize: 14, fontWeight: 560, color: wt.color.text, fontFamily: FONT,
-          cursor: loading ? "wait" : "pointer", marginBottom: err ? 8 : 0,
-          transition: `background ${wt.motion.base} ${wt.motion.ease}`,
-        }}
-        aria-label="Continuar con Google"
-      >
-        <GoogleG />
-        {loading ? "Abriendo Google…" : "Continuar con Google"}
-      </button>
-      {err && (
-        <div role="alert" style={{ fontSize: 12, color: wt.color.danger, marginBottom: 10, textAlign: "center" }}>{err}</div>
-      )}
-    </>
+    <div
+      aria-disabled
+      style={{
+        width: "100%", height: 46, padding: "0 16px",
+        background: wt.color.surface, border: `1px solid ${wt.color.border}`,
+        borderRadius: wt.radius.md, opacity: 0.6,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        fontSize: 14, fontWeight: 560, color: wt.color.textMuted, fontFamily: FONT, cursor: "not-allowed",
+      }}
+    >
+      <span style={{ display: "inline-flex" }}>{icon}</span>
+      <span>{label}</span>
+      <Badge variant="outline" size="sm">Pronto</Badge>
+    </div>
   );
 }
 
@@ -206,8 +182,8 @@ function SignupInner() {
   const [error, setError]       = useState("");
   const [done, setDone]         = useState(false);
 
-  // Intent de origen: si el usuario viene del diagnóstico, mostramos copy honesto
-  // (todavía NO se persiste el diagnóstico — no inventamos persistencia falsa).
+  // Intent de origen: si el usuario viene del diagnóstico, mostramos copy honesto. El draft del
+  // diagnóstico SÍ se persiste en localStorage y /app/mes lo retoma como primer Mes Fiscal (R7.5).
   const fromDiagnostico =
     search?.get("from") === "diagnostico" || search?.get("intent") === "guardar-mes";
 
@@ -289,7 +265,6 @@ function SignupInner() {
       setError(translateSignupError(error.message));
       setLoading(false);
     } else {
-      try { await fetch("/api/email/welcome", { method: "POST" }); } catch { /* non-fatal */ }
       const refCode = readCookie(REF_COOKIE);
       if (refCode) {
         try {
@@ -333,10 +308,16 @@ function SignupInner() {
           <h1 style={{ ...wt.text.h1, color: wt.color.text, marginBottom: 10 }}>
             Revisa tu correo
           </h1>
-          <p style={{ ...wt.text.body, color: wt.color.textMuted, lineHeight: 1.6, marginBottom: 20 }}>
+          <p style={{ ...wt.text.body, color: wt.color.textMuted, lineHeight: 1.6, marginBottom: 14 }}>
             Enviamos un enlace de confirmación a{" "}
             <strong style={{ color: wt.color.text }}>{email}</strong>.
             {" "}Click ahí para activar tu cuenta y empezar.
+          </p>
+          {/* R8: honesto — en modo sin costo el correo automático puede no llegar; ruta de activación manual. */}
+          <p style={{ ...wt.text.caption, color: wt.color.textMuted, lineHeight: 1.6, marginBottom: 18 }}>
+            ¿No te llega en unos minutos? Escríbenos a{" "}
+            <a href="mailto:hola@wedgemx.com" style={{ color: wt.color.orange, textDecoration: "none" }}>hola@wedgemx.com</a>
+            {" "}y activamos tu cuenta.
           </p>
           <ResendEmailButton email={email} />
           <div style={{ marginTop: 24 }}>
@@ -393,19 +374,19 @@ function SignupInner() {
             borderRadius: wt.radius.md,
           }}>
             <span style={{ ...wt.text.bodySm, color: wt.color.trustInk }}>
-              En la siguiente fase podrás retomar este diagnóstico dentro de tu primer Mes Fiscal.
+              Tu diagnóstico se guardó en este navegador; al crear tu cuenta lo retomamos como tu primer Mes Fiscal.
             </span>
           </div>
         )}
 
         {/* Card: Google + form */}
         <Card variant="default" padding="comfortable" style={{ marginTop: wt.space[7] }}>
-          <SignupGoogleButton />
+          <DisabledMethod icon={<GoogleG />} label="Continuar con Google" />
 
-          {/* Divider */}
+          {/* Divider — el correo es el método activo (Google llega "Pronto") */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0 18px" }}>
             <div style={{ flex: 1, height: 1, background: wt.color.border }} />
-            <span style={{ ...wt.text.micro, color: wt.color.textMuted }}>o con correo</span>
+            <span style={{ ...wt.text.micro, color: wt.color.textMuted }}>crea tu cuenta con correo</span>
             <div style={{ flex: 1, height: 1, background: wt.color.border }} />
           </div>
 

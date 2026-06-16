@@ -67,6 +67,12 @@ export default function ForgotPassword() {
               <div style={{ ...wt.text.bodySm, color: wt.color.textMuted, lineHeight: 1.5 }}>
                 Enviamos un enlace a <strong style={{ color: wt.color.text }}>{email}</strong> para restablecer tu contraseña. Revisa también spam.
               </div>
+              {/* R8: honesto — si el correo automático no llega (modo sin costo), ruta de recuperación manual. */}
+              <div style={{ ...wt.text.caption, color: wt.color.textMuted, lineHeight: 1.5 }}>
+                ¿No te llega en unos minutos? Escríbenos a{" "}
+                <a href="mailto:hola@wedgemx.com" style={{ color: wt.color.orange, textDecoration: "none" }}>hola@wedgemx.com</a>
+                {" "}y te ayudamos a recuperar tu acceso.
+              </div>
               <Button variant="secondary" onClick={() => router.push("/login")} leftIcon={<ArrowLeft size={16} />}>Volver a iniciar sesión</Button>
             </div>
           </Card>

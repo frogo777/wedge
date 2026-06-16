@@ -122,10 +122,11 @@ export function getMockFiscalMonth(): FiscalMonth {
     ],
     satGuideStatus: "disponible",
     evidenceStatus: "parcial",
+    // Historial de EJEMPLO (la UI lo etiqueta "Ejemplo" en modo demo). Solo meses PREVIOS
+    // (no incluir el mes activo Junio 2026, que ya es la cabecera).
     historyPreview: [
       { monthLabel: "Mayo 2026", status: "marcado_presentado" },
       { monthLabel: "Abril 2026", status: "marcado_presentado" },
-      { monthLabel: "Junio 2026", status: "en_revision" },
     ],
     createdAt: "2026-06-01T00:00:00.000Z",
     updatedAt: "2026-06-13T00:00:00.000Z",

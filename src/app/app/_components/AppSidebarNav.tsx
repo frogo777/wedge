@@ -24,7 +24,7 @@ const ITEMS: NavItem[] = [
   { label: "Guía SAT", icon: <ClipboardCheck size={17} /> },
   { label: "luk", icon: <Sparkles size={17} />, href: "/app/luk" },
   { label: "Historial", icon: <Clock size={17} /> },
-  { label: "Settings", icon: <Settings size={17} />, href: "/app/settings" },
+  { label: "Ajustes", icon: <Settings size={17} />, href: "/app/settings" },
 ];
 
 export function AppSidebarNav() {
