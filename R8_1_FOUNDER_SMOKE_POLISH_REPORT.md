@@ -3,6 +3,11 @@
 > **Fecha:** 2026-06-16 · Repo `frogo777/wedge` · base `9256187` (R8). Pulido de las fricciones del **smoke
 > real del founder** (video con el ZIP sintético). Sin features grandes, sin SAT/MCP/SMTP/Google/servicios
 > pagos, sin rediseño ni cambios de arquitectura fiscal.
+>
+> **Estado: CERRADO ✅** — desplegado en `bf7ad47` (live `wedge-4r7s.vercel.app`) y **confirmado visualmente
+> por el founder (2026-06-16)** en su sesión: progreso explicado, feedback de excluir/confirmar CFDI claro,
+> luk cierra con CTA real, Guía SAT/Evidencia "Próximamente", historial demo "Ejemplo", `/app/luk` carga el
+> snapshot. Sin P0. Sin cambios adicionales.
 
 ## 1. Qué se observó en el video
 La app y el flujo XML/ZIP funcionan (12 CFDIs / $58,000 / $3,575 / PPD 1), Inbox/Mes/luk responden y la
@@ -57,5 +62,13 @@ autenticado (decisiones, guardado, luk) lo valida el founder.
 7. **Móvil:** nav, logout, subir ZIP, ver feedback de guardado.
 
 ## 7. ¿R8.1 cerrado?
-**Cerrado del lado de código** (audit + fixes + QA verde). Pendiente: push (con tu OK) + tu smoke visual
-(incl. móvil) + la config `NEXT_PUBLIC_SITE_URL`. No bloquea el dogfooding diario.
+**CERRADO ✅** — desplegado (`bf7ad47`) y **confirmado visualmente por el founder** (smoke en su sesión, ver
+encabezado). Verificado: progreso explicado · feedback excluir (baja el estimado) / confirmar (no lo cambia) ·
+luk con CTA real · "Próximamente" en Guía SAT/Evidencia · historial demo "Ejemplo" · `/app/luk` carga el
+snapshot (no se queda sin contexto). **Sin P0.**
+
+No bloquean el dogfooding (quedan como recordatorios, no parte de R8.1):
+- Config en Vercel: `NEXT_PUBLIC_SITE_URL` (OG image para TikTok).
+- Pase visual **móvil** del founder (code-complete; nav/logout/upload presentes).
+- Pendientes de seguridad/infra: rotar secret Supabase + token Vercel; borrar Vercel duplicado `wedge`.
+- SAT/MCP/SMTP/Google siguen congelados por decisión del founder.
