@@ -4,6 +4,10 @@
 > Bug crítico de flujo: un usuario autenticado con Mes Fiscal guardado era empujado a diagnóstico, y
 > un **draft de diagnóstico local tapaba su snapshot guardado** → sensación de perder el avance.
 > Sin SAT/MCP/servicios pagos · sin rediseño grande · sin tocar `wedgemx.com` · sin cambiar RLS.
+>
+> **Estado: CERRADO ✅** — desplegado en `d4b8843` (live `wedge-4r7s.vercel.app`) y **verificado en vivo por
+> el founder (2026-06-16)**: el nav dice "Ir a mi Mes Fiscal", `/app/mes` carga el Mes guardado, no fuerza
+> diagnóstico, el diagnóstico local no reemplaza nada en automático, y logout/login mantiene el Mes guardado.
 
 ## 1. Causa raíz
 En `/app/mes` ([page.tsx](src/app/app/mes/page.tsx)) el `useEffect` de carga tenía la prioridad:
@@ -99,3 +103,14 @@ typecheck **PASS** · tests **417 passed** (era 406; +11) · build **PASS** (27 
 - **No-bugs descartados en la revisión:** chequeo de exhaustividad del union de modos (la lógica es correcta
   y la cubren 11 tests) y "decisiones de CFDI huérfanas" (comportamiento pre-existente, fuera de alcance R7.5).
 - Pendientes manuales del founder (sin cambio): rotar secret Supabase + token Vercel; borrar Vercel duplicado.
+
+## 9. Verificación en vivo (founder, 2026-06-16) — CERRADO
+El founder probó el deploy `d4b8843` y confirmó:
+- ✅ El nav dice **"Ir a mi Mes Fiscal"** (ya no "Hacer diagnóstico").
+- ✅ `/app/mes` carga el **Mes guardado** directamente.
+- ✅ **No** lo fuerza a diagnóstico.
+- ✅ El diagnóstico local **no reemplaza nada** en automático.
+- ✅ **Cerrar sesión y volver a entrar mantiene** el Mes guardado.
+
+**R7.5 queda CERRADO.** El bug de flujo de entrada (snapshot tapado por draft / empuje a diagnóstico /
+sensación de pérdida) está resuelto y verificado en producción.
