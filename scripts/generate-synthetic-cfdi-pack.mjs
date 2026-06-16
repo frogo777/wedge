@@ -35,7 +35,7 @@ function cfdiXml(o) {
   const docImp = o.docImpuestos || "";
   const extra = o.complemento || "";
   return `<?xml version="1.0" encoding="${enc}"?>
-<!-- SINTÉTICO — datos falsos para pruebas de Wedge. NO es un CFDI válido para el SAT. -->
+<!-- SINTÉTICO - datos falsos para pruebas de Wedge. NO es un CFDI válido para el SAT. -->
 <cfdi:Comprobante ${CFDI} Version="4.0" Fecha="${o.fecha}" SubTotal="${o.subTotal}" Total="${o.total}" Moneda="${o.moneda || "MXN"}" TipoDeComprobante="${o.tipo}"${metodo} FormaPago="${o.formaPago || "03"}" Exportacion="01" LugarExpedicion="64000">
   <cfdi:Emisor Rfc="${o.emisor.rfc}" Nombre="${o.emisor.nombre}" RegimenFiscal="${o.emisor.regimen}"/>
   <cfdi:Receptor Rfc="${o.receptor.rfc}" Nombre="${o.receptor.nombre}" DomicilioFiscalReceptor="64000" RegimenFiscalReceptor="${o.receptor.regimen}" UsoCFDI="${o.uso || "G03"}"/>
@@ -106,7 +106,7 @@ const cases = [
 
   // 07: REP (tipo P) relacionado al PPD #06 — no es ingreso nuevo.
   { file: "07-rep-complemento.xml", enc: "utf8", xml: `<?xml version="1.0" encoding="UTF-8"?>
-<!-- SINTÉTICO — REP (complemento de pago). NO válido para SAT. -->
+<!-- SINTÉTICO - REP (complemento de pago). NO válido para SAT. -->
 <cfdi:Comprobante ${CFDI} Version="4.0" Fecha="2026-06-20T09:00:00" SubTotal="0" Total="0" Moneda="XXX" TipoDeComprobante="P" LugarExpedicion="64000" Exportacion="01">
   <cfdi:Emisor Rfc="${USER.rfc}" Nombre="${USER.nombre}" RegimenFiscal="${USER.regimen}"/>
   <cfdi:Receptor Rfc="${CLIENTE.rfc}" Nombre="${CLIENTE.nombre}" DomicilioFiscalReceptor="64000" RegimenFiscalReceptor="${CLIENTE.regimen}" UsoCFDI="CP01"/>
@@ -167,10 +167,15 @@ const cases = [
 mkdirSync(XML_DIR, { recursive: true });
 mkdirSync(ZIP_DIR, { recursive: true });
 
+// Garantiza que el XML "latin1" sea VÁLIDO: cualquier codepoint > 0xFF (p.ej. un em-dash "—") se
+// truncaría con Buffer.from(...,"latin1") a un byte de control que el DOMParser del navegador rechaza
+// (descarta el CFDI entero). Lo mapeamos a "-" antes de escribir. Sin esto, R7.4C se podría reintroducir.
+const toLatin1Safe = (s) => Array.from(s, (ch) => (ch.codePointAt(0) > 0xff ? "-" : ch)).join("");
+
 // Escribir XML (latin1 para el caso ISO; utf8 para el resto).
 const bytesByFile = {};
 for (const c of cases) {
-  const buf = c.enc === "latin1" ? Buffer.from(c.xml, "latin1") : Buffer.from(c.xml, "utf8");
+  const buf = c.enc === "latin1" ? Buffer.from(toLatin1Safe(c.xml), "latin1") : Buffer.from(c.xml, "utf8");
   writeFileSync(join(XML_DIR, c.file), buf);
   bytesByFile[c.file] = new Uint8Array(buf);
 }

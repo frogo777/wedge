@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- SINTÉTICO — REP (complemento de pago). NO válido para SAT. -->
+<!-- SINTÉTICO - REP (complemento de pago). NO válido para SAT. -->
 <cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" Fecha="2026-06-20T09:00:00" SubTotal="0" Total="0" Moneda="XXX" TipoDeComprobante="P" LugarExpedicion="64000" Exportacion="01">
   <cfdi:Emisor Rfc="SYNU010101AB1" Nombre="Persona Sintetica Demo" RegimenFiscal="626"/>
   <cfdi:Receptor Rfc="CLIA010101AB2" Nombre="Cliente Sintetico A SA de CV" DomicilioFiscalReceptor="64000" RegimenFiscalReceptor="601" UsoCFDI="CP01"/>

@@ -131,11 +131,21 @@ export function decodeXmlBytes(bytes: Uint8Array): string {
   } catch {
     text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
   }
-  // R7.4B: el string ya es Unicode. Si el prólogo aún declara otra codificación
-  // (ISO-8859-1 / Windows-1252), el DOMParser del navegador puede RECHAZAR el XML (intenta
-  // re-interpretar bytes que ya no existen) → el CFDI se cae en el navegador aunque parsee en
-  // Node (regex). Normalizamos la declaración a UTF-8 para que sea consistente con el contenido.
-  return text.replace(/(<\?xml[^>]*\bencoding\s*=\s*")[^"]*(")/i, "$1UTF-8$2");
+  // R7.4B: el string ya es Unicode. Normalizamos la declaración del prólogo a UTF-8 para que sea
+  // consistente con el contenido (evita que el DOMParser intente re-interpretar bytes inexistentes).
+  text = text.replace(/(<\?xml[^>]*\bencoding\s*=\s*")[^"]*(")/i, "$1UTF-8$2");
+  // R7.4C: descarta caracteres de control ILEGALES en XML 1.0 (todo el rango C0 salvo tab/LF/CR). El
+  // DOMParser del navegador RECHAZA el documento COMPLETO ante uno solo (p.ej. 0x14 → "xmlParseComment:
+  // invalid xmlChar value 20"), mientras el parser regex de Node los ignora → el CFDI se caía SOLO en
+  // el navegador (−1 CFDI, silencioso). Casos reales: ERPs/PACs que dejan control chars, o un carácter
+  // no-latin1 mal codificado. No toca montos/RFC (ASCII); solo limpia ruido que no es XML válido.
+  let cleaned = "";
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code < 0x20 && code !== 9 && code !== 10 && code !== 13) continue; // conserva tab/LF/CR
+    cleaned += text[i];
+  }
+  return cleaned;
 }
 
 /** Lee un archivo .xml como texto, respetando su encoding declarado. Falla seguro. */

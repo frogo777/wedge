@@ -31,8 +31,9 @@
 
 ## Resultados esperados (con `wedge-cfdi-synthetic-pack.zip`)
 
-> Números **exactos**, verificados por el test de reconciliación `synthetic-reconciliation.vitest.ts`
-> (reconciliados con R7.4B). Requiere el deploy con el fix de encoding (R7.4B) para que el caso ISO cuente.
+> Números **exactos**, verificados por el test de reconciliación `synthetic-reconciliation.vitest.ts`.
+> Requiere el deploy con **R7.4C** (strip de control chars en `decodeXmlBytes`) para que el caso ISO
+> cuente en el navegador — antes se caía por un byte de control `0x14`, no por el encoding.
 
 **Fiscal Inbox (`/app/cfdis`):**
 | Métrica | Esperado |
@@ -41,7 +42,7 @@
 | Ingresos | **8** (incluye PPD y USD como "detectados") |
 | Gastos | **2** (G03 deducible · S01 por revisar) |
 | Requieren revisión | **6** (las 3 con retención + egreso + USD) |
-| Ingresos detectados ($) | **$50,000–$58,000**: el monto canónico es **$58,000** (USD excluido). *Si ves $50,000 y solo 11 CFDIs → el caso ISO se cayó: falta el deploy de R7.4B.* |
+| Ingresos detectados ($) | **$58,000** (USD excluido). *Si ves $50,000 y solo 11 CFDIs → falta el deploy de R7.4C (el caso ISO se cae por un control char `0x14`); en ese deploy cuenta y da 12/$58,000.* |
 | **Retenciones** | **$3,575** = ISR **$375** + IVA **$3,200** (incluye la del caso 05 a nivel documento) |
 | Cancelados | **0** (el pack no incluye un cancelado; el estatus de cancelación no viaja en el XML) |
 | Pendientes de complemento (PPD) | **1** (caso 06) |
